@@ -13,13 +13,13 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  slackId   String    @unique // Slack user id (the OIDC `sub` claim)
-  name      String // Slack display/real name (fallback)
-  handle    String? // Slack @handle, fetched via users.info (preferred for display)
-  image     String?
+  // We persist only the Slack user id; name / @handle / avatar are fetched
+  // live from Slack (users.info) and cached, so identity is never stale and
+  // no profile data is stored. See src/lib/slack-profile.ts.
+  id        String   @id @default(cuid())
+  slackId   String   @unique // Slack user id (the OIDC `sub` claim)
   listings  Listing[]
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 }
 
 model Listing {

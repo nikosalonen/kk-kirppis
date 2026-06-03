@@ -4,18 +4,20 @@ import { ImageOff } from "lucide-react";
 import type { Listing, ListingImage, User } from "@prisma/client";
 import { formatPrice, sellerLabel } from "@/lib/format";
 import { publicImageUrl } from "@/lib/image-url";
+import { getSlackProfile } from "@/lib/slack-profile";
 
 type CardListing = Pick<
   Listing,
   "id" | "title" | "priceCents" | "platform" | "status"
 > & {
   images: Pick<ListingImage, "url">[];
-  seller: Pick<User, "name" | "handle" | "image">;
+  seller: Pick<User, "slackId">;
 };
 
-export function ListingCard({ listing }: { listing: CardListing }) {
+export async function ListingCard({ listing }: { listing: CardListing }) {
   const cover = listing.images[0];
   const sold = listing.status === "SOLD";
+  const seller = await getSlackProfile(listing.seller.slackId);
 
   return (
     <Link
@@ -55,19 +57,19 @@ export function ListingCard({ listing }: { listing: CardListing }) {
           {listing.title}
         </h3>
         <div className="flex items-center gap-1.5 text-xs text-muted">
-          {listing.seller.image ? (
+          {seller.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={listing.seller.image}
+              src={seller.image}
               alt=""
               className="h-4 w-4 rounded-full border border-border object-cover"
             />
           ) : (
             <span className="grid h-4 w-4 place-items-center rounded-full border border-border bg-surface-2 text-[8px] font-mono">
-              {listing.seller.name.slice(0, 1).toUpperCase()}
+              {seller.name.slice(0, 1).toUpperCase()}
             </span>
           )}
-          <span className="truncate">{sellerLabel(listing.seller)}</span>
+          <span className="truncate">{sellerLabel(seller)}</span>
         </div>
         <div className="mt-auto flex items-center justify-between gap-2">
           <span className="font-mono text-lg font-bold text-accent">

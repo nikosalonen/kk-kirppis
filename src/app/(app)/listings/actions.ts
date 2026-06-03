@@ -7,6 +7,7 @@ import { getOwnedListingOrThrow } from "@/lib/listings";
 import { prisma } from "@/lib/prisma";
 import { deleteImages } from "@/lib/storage";
 import { announceNewListing } from "@/lib/slack";
+import { getSlackProfile } from "@/lib/slack-profile";
 import { sellerLabel } from "@/lib/format";
 import { eurosToCents, listingInputSchema } from "@/lib/validation";
 
@@ -49,12 +50,13 @@ export async function createListing(
   });
 
   // Best-effort community announcement (never blocks creation).
+  const seller = await getSlackProfile(user.slackId);
   await announceNewListing({
     id: listing.id,
     title: listing.title,
     priceCents: listing.priceCents,
     platform: listing.platform,
-    sellerLabel: sellerLabel({ name: user.name ?? "A member", handle: user.handle }),
+    sellerLabel: sellerLabel(seller),
     coverPath: data.imagePaths[0] ?? null,
   });
 

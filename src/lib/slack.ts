@@ -2,38 +2,6 @@ import "server-only";
 import { formatPrice } from "@/lib/format";
 import { publicImageUrl } from "@/lib/image-url";
 
-/**
- * Look up a member's Slack @handle via users.info. Needs the bot token with
- * the `users:read` scope. Best-effort: returns null if not configured or on
- * any error, so callers fall back to the display name.
- */
-export async function fetchSlackHandle(
-  slackUserId: string,
-): Promise<string | null> {
-  const token = process.env.SLACK_BOT_TOKEN;
-  if (!token) return null;
-  try {
-    const res = await fetch(
-      `https://slack.com/api/users.info?user=${encodeURIComponent(slackUserId)}`,
-      { headers: { authorization: `Bearer ${token}` } },
-    );
-    const data = (await res.json()) as {
-      ok: boolean;
-      error?: string;
-      user?: { name?: string; profile?: { display_name?: string } };
-    };
-    if (!data.ok) {
-      console.error("[slack handle] users.info failed:", data.error);
-      return null;
-    }
-    const handle = data.user?.profile?.display_name || data.user?.name || "";
-    return handle.length > 0 ? handle : null;
-  } catch (err) {
-    console.error("[slack handle] error:", err);
-    return null;
-  }
-}
-
 type AnnounceInput = {
   id: string;
   title: string;

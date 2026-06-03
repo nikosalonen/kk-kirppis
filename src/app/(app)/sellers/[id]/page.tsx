@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, MessageCircle } from "lucide-react";
 import { auth } from "@/auth";
 import { getSellerProfile } from "@/lib/listings";
+import { getSlackProfile } from "@/lib/slack-profile";
 import { sellerLabel, slackDmUrl } from "@/lib/format";
 import { ListingCard } from "@/components/listing-card";
 import { buttonVariants } from "@/components/ui/button";
@@ -25,7 +26,8 @@ export default async function SellerPage({
 
   const { seller, listings } = profile;
   const isSelf = session?.user?.id === seller.id;
-  const label = sellerLabel(seller);
+  const identity = await getSlackProfile(seller.slackId);
+  const label = sellerLabel(identity);
 
   return (
     <div className="flex flex-col gap-7">
@@ -39,16 +41,16 @@ export default async function SellerPage({
 
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
         <div className="flex items-center gap-4">
-          {seller.image ? (
+          {identity.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={seller.image}
+              src={identity.image}
               alt=""
               className="h-14 w-14 rounded-full border border-border object-cover"
             />
           ) : (
             <span className="grid h-14 w-14 place-items-center rounded-full border border-border bg-surface-2 font-mono text-sm text-muted">
-              {seller.name.slice(0, 2).toUpperCase()}
+              {identity.name.slice(0, 2).toUpperCase()}
             </span>
           )}
           <div className="flex flex-col gap-1">

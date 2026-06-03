@@ -7,7 +7,8 @@ export type ListingFilters = {
 
 const withImagesAndSeller = {
   images: { orderBy: { sortOrder: "asc" } },
-  seller: true,
+  // Only the Slack id — display identity is resolved live via getSlackProfile.
+  seller: { select: { id: true, slackId: true } },
 } as const;
 
 export async function getActiveListings(filters: ListingFilters = {}) {
@@ -46,7 +47,7 @@ export async function getListingsBySeller(sellerId: string) {
 export async function getSellerProfile(sellerId: string) {
   const seller = await prisma.user.findUnique({
     where: { id: sellerId },
-    select: { id: true, name: true, handle: true, image: true, slackId: true },
+    select: { id: true, slackId: true },
   });
   if (!seller) return null;
 

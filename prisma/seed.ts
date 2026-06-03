@@ -41,7 +41,7 @@ async function main() {
   const seller = await prisma.user.upsert({
     where: { slackId: "U_SEED_DEMO" },
     update: {},
-    create: { slackId: "U_SEED_DEMO", name: "Demo Seller", image: null },
+    create: { slackId: "U_SEED_DEMO" },
   });
 
   for (const game of SAMPLE) {
@@ -50,7 +50,7 @@ async function main() {
     });
   }
 
-  console.log(`Seeded ${SAMPLE.length} listings for ${seller.name}.`);
+  console.log(`Seeded ${SAMPLE.length} listings for ${seller.slackId}.`);
 }
 
 main()

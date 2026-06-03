@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ImageOff, MessageCircle, Pencil } from "lucide-react";
 import { auth } from "@/auth";
 import { getListing } from "@/lib/listings";
+import { getSlackProfile } from "@/lib/slack-profile";
 import { formatPrice, sellerLabel, slackDmUrl } from "@/lib/format";
 import { publicImageUrl } from "@/lib/image-url";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ export default async function ListingPage({
   const isOwner = session?.user?.id === listing.sellerId;
   const sold = listing.status === "SOLD";
   const [cover, ...rest] = listing.images;
+  const seller = await getSlackProfile(listing.seller.slackId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -105,21 +107,21 @@ export default async function ListingPage({
             href={`/sellers/${listing.sellerId}`}
             className="group mt-2 flex items-center gap-3 border-t border-border pt-5"
           >
-            {listing.seller.image ? (
+            {seller.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={listing.seller.image}
+                src={seller.image}
                 alt=""
                 className="h-10 w-10 rounded-full border border-border object-cover"
               />
             ) : (
               <span className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface-2 font-mono text-xs text-muted">
-                {listing.seller.name.slice(0, 2).toUpperCase()}
+                {seller.name.slice(0, 2).toUpperCase()}
               </span>
             )}
             <div className="text-sm">
               <div className="font-medium group-hover:text-accent">
-                {sellerLabel(listing.seller)}
+                {sellerLabel(seller)}
               </div>
               <div className="text-muted">View all listings →</div>
             </div>
@@ -158,7 +160,7 @@ export default async function ListingPage({
               className={buttonVariants({ variant: "primary", size: "lg" })}
             >
               <MessageCircle className="h-5 w-5" />
-              Contact {sellerLabel(listing.seller)} on Slack
+              Contact {sellerLabel(seller)} on Slack
             </a>
           )}
         </div>
