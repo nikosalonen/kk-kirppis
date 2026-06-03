@@ -15,7 +15,7 @@ payments, no middlemen.
 - **Vitest** for the security-critical ownership test
 - Seller identity (name, **@handle**, avatar) fetched **live from Slack** and
   cached — no profile data is stored, only the Slack user id
-- Optional: **RAWG** game-metadata autofill, **Slack channel announcements**
+- Optional: **IGDB** game-metadata autofill, **Slack channel announcements**
 
 ## Prerequisites
 
@@ -39,9 +39,10 @@ payments, no middlemen.
 
 ### Optional integrations
 
-- **Game-metadata autofill (RAWG):** a free key from <https://rawg.io/apidocs>
-  enables the "Find game info" button on the sell form (fills title + cover).
-  Set `RAWG_API_KEY`.
+- **Game-metadata autofill (IGDB):** register an app at
+  <https://dev.twitch.tv/console/apps> (IGDB auth runs on Twitch OAuth) to enable
+  the "Find game info" button on the sell form (fills title + cover/screenshots).
+  Set `IGDB_CLIENT_ID` and `IGDB_SECRET`.
 - **Seller identity + channel announcements (Slack bot):** add **Bot Token
   Scopes** `users:read` (seller name / @handle / avatar) and `chat:write`
   (announcements), **reinstall** the app, and copy the **Bot User OAuth Token**
@@ -74,7 +75,7 @@ Fill `.env` (see `.env.example` for the full list):
 - `KOODIKLINIKKA_SLACK_TEAM_ID` — the workspace team id (`T…`)
 - `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
   `SUPABASE_STORAGE_BUCKET`
-- Optional: `RAWG_API_KEY` (metadata autofill), `SLACK_BOT_TOKEN` (seller
+- Optional: `IGDB_CLIENT_ID` / `IGDB_SECRET` (metadata autofill), `SLACK_BOT_TOKEN` (seller
   identity via `users.info`), `SLACK_ANNOUNCE_CHANNEL_ID` (channel announcements)
 
 ## Security model
