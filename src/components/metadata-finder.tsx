@@ -96,8 +96,18 @@ export function MetadataFinder({
     }
     onPick({ title: result.title, coverPaths });
     setPicker(null);
-    setOpen(false);
-    setResults([]);
+
+    // Surface partial failures instead of silently dropping images: keep the
+    // finder open with a message so the user knows some shots didn't import.
+    const failed = urls.length - coverPaths.length;
+    if (failed > 0) {
+      setError(
+        `${failed} image${failed === 1 ? "" : "s"} couldn't be imported — try again.`,
+      );
+    } else {
+      setOpen(false);
+      setResults([]);
+    }
   }
 
   function chooseResult(result: Result) {
