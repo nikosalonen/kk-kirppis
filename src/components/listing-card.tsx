@@ -14,7 +14,14 @@ type CardListing = Pick<
   seller: Pick<User, "slackId">;
 };
 
-export async function ListingCard({ listing }: { listing: CardListing }) {
+export async function ListingCard({
+  listing,
+  priority = false,
+}: {
+  listing: CardListing;
+  // Set for above-the-fold cards (first row) so the LCP image preloads.
+  priority?: boolean;
+}) {
   const cover = listing.images[0];
   const sold = listing.status === "SOLD";
   const seller = await getSlackProfile(listing.seller.slackId);
@@ -30,6 +37,7 @@ export async function ListingCard({ listing }: { listing: CardListing }) {
             src={publicImageUrl(cover.url)}
             alt=""
             fill
+            priority={priority}
             sizes="(max-width: 768px) 100vw, 320px"
             className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
               sold ? "opacity-40 grayscale" : ""
