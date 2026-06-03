@@ -36,7 +36,10 @@ export async function POST(req: Request) {
       contentTypes as string[],
     );
     return NextResponse.json({ targets });
-  } catch {
+  } catch (err) {
+    // Surface the real cause in the server log (missing service-role key,
+    // missing bucket, etc.) without leaking it to the client.
+    console.error("[uploads] failed to create signed upload URLs:", err);
     return NextResponse.json(
       { error: "Could not create upload URLs" },
       { status: 500 },
