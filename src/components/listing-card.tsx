@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ImageOff } from "lucide-react";
-import type { Listing, ListingImage } from "@prisma/client";
+import type { Listing, ListingImage, User } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { CONDITION_LABELS, formatPrice } from "@/lib/format";
 import { publicImageUrl } from "@/lib/image-url";
@@ -9,7 +9,10 @@ import { publicImageUrl } from "@/lib/image-url";
 type CardListing = Pick<
   Listing,
   "id" | "title" | "priceCents" | "condition" | "platform" | "status"
-> & { images: Pick<ListingImage, "url">[] };
+> & {
+  images: Pick<ListingImage, "url">[];
+  seller: Pick<User, "name" | "image">;
+};
 
 export function ListingCard({ listing }: { listing: CardListing }) {
   const cover = listing.images[0];
@@ -52,6 +55,21 @@ export function ListingCard({ listing }: { listing: CardListing }) {
         <h3 className="line-clamp-2 font-display text-base font-bold leading-snug tracking-tight text-ink">
           {listing.title}
         </h3>
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          {listing.seller.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={listing.seller.image}
+              alt=""
+              className="h-4 w-4 rounded-full border border-border object-cover"
+            />
+          ) : (
+            <span className="grid h-4 w-4 place-items-center rounded-full border border-border bg-surface-2 text-[8px] font-mono">
+              {listing.seller.name.slice(0, 1).toUpperCase()}
+            </span>
+          )}
+          <span className="truncate">{listing.seller.name}</span>
+        </div>
         <div className="mt-auto flex items-center justify-between gap-2">
           <span className="font-mono text-lg font-bold text-accent">
             {formatPrice(listing.priceCents)}

@@ -37,7 +37,7 @@ export async function getListing(id: string) {
 export async function getListingsBySeller(sellerId: string) {
   return prisma.listing.findMany({
     where: { sellerId },
-    include: { images: { orderBy: { sortOrder: "asc" } } },
+    include: withImagesAndSeller,
     orderBy: { createdAt: "desc" },
   });
 }
