@@ -39,6 +39,25 @@ export async function getListingsBySeller(sellerId: string) {
   });
 }
 
+/**
+ * Public seller profile: the seller plus their ACTIVE listings (what a buyer
+ * can actually contact them about). Returns null if the user doesn't exist.
+ */
+export async function getSellerProfile(sellerId: string) {
+  const seller = await prisma.user.findUnique({
+    where: { id: sellerId },
+    select: { id: true, name: true, handle: true, image: true, slackId: true },
+  });
+  if (!seller) return null;
+
+  const listings = await prisma.listing.findMany({
+    where: { sellerId, status: "ACTIVE" },
+    include: withImagesAndSeller,
+    orderBy: { createdAt: "desc" },
+  });
+  return { seller, listings };
+}
+
 /** Distinct platforms among active listings, for the filter dropdown. */
 export async function getActivePlatforms(): Promise<string[]> {
   const rows = await prisma.listing.findMany({

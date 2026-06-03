@@ -101,7 +101,10 @@ export default async function ListingPage({
             {listing.description}
           </p>
 
-          <div className="mt-2 flex items-center gap-3 border-t border-border pt-5">
+          <Link
+            href={`/sellers/${listing.sellerId}`}
+            className="group mt-2 flex items-center gap-3 border-t border-border pt-5"
+          >
             {listing.seller.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -115,10 +118,12 @@ export default async function ListingPage({
               </span>
             )}
             <div className="text-sm">
-              <div className="font-medium">{sellerLabel(listing.seller)}</div>
-              <div className="text-muted">Seller</div>
+              <div className="font-medium group-hover:text-accent">
+                {sellerLabel(listing.seller)}
+              </div>
+              <div className="text-muted">View all listings →</div>
             </div>
-          </div>
+          </Link>
 
           {/* Actions */}
           {isOwner ? (
