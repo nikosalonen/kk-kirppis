@@ -47,30 +47,29 @@ export async function announceNewListing(input: AnnounceInput): Promise<void> {
 
   // Title is plain (escaped) text — the clickable link lives only in the
   // button below, whose url is our own constructed value, not user input.
-  const section: Record<string, unknown> = {
-    type: "section",
-    text: {
-      type: "mrkdwn",
-      text: `*${esc(input.title)}*\n${price}${meta ? ` · ${esc(meta)}` : ""}`,
+  const blocks: Record<string, unknown>[] = [
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*${esc(input.title)}*\n${price}${meta ? ` · ${esc(meta)}` : ""}`,
+      },
     },
-  };
+  ];
+
+  // Full-width preview of the listing's first image, when there is one.
   if (input.coverPath) {
-    section.accessory = {
+    blocks.push({
       type: "image",
       image_url: publicImageUrl(input.coverPath),
       alt_text: input.title,
-    };
+    });
   }
 
-  const blocks: Record<string, unknown>[] = [
-    section,
-    {
-      type: "context",
-      elements: [
-        { type: "mrkdwn", text: `Listed by ${esc(input.sellerLabel)}` },
-      ],
-    },
-  ];
+  blocks.push({
+    type: "context",
+    elements: [{ type: "mrkdwn", text: `Listed by ${esc(input.sellerLabel)}` }],
+  });
 
   // Slack rejects a button with a relative URL (and the whole message with it),
   // so only add the "View listing" action when we have an absolute base URL.
