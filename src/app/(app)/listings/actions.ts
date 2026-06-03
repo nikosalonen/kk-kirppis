@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/session";
 import { getOwnedListingOrThrow } from "@/lib/listings";
 import { prisma } from "@/lib/prisma";
 import { deleteImages } from "@/lib/storage";
+import { announceNewListing } from "@/lib/slack";
 import { eurosToCents, listingInputSchema } from "@/lib/validation";
 
 export type FormState = { error?: string } | undefined;
@@ -46,6 +47,17 @@ export async function createListing(
         create: data.imagePaths.map((url, sortOrder) => ({ url, sortOrder })),
       },
     },
+  });
+
+  // Best-effort community announcement (never blocks creation).
+  await announceNewListing({
+    id: listing.id,
+    title: listing.title,
+    priceCents: listing.priceCents,
+    condition: listing.condition,
+    platform: listing.platform,
+    sellerName: user.name ?? "A Koodiklinikka member",
+    coverPath: data.imagePaths[0] ?? null,
   });
 
   revalidatePath("/");
