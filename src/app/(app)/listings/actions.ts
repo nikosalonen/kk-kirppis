@@ -54,6 +54,7 @@ export async function createListing(
   await announceNewListing({
     id: listing.id,
     title: listing.title,
+    description: listing.description,
     priceCents: listing.priceCents,
     platform: listing.platform,
     sellerLabel: sellerLabel(seller),

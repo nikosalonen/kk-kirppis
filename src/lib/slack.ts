@@ -5,6 +5,7 @@ import { publicImageUrl } from "@/lib/image-url";
 type AnnounceInput = {
   id: string;
   title: string;
+  description: string;
   priceCents: number;
   platform?: string | null;
   sellerLabel: string;
@@ -47,27 +48,31 @@ export async function announceNewListing(input: AnnounceInput): Promise<void> {
   // Slack caps header text at 150 chars.
   const headerText = (input.title || "New listing").slice(0, 150);
 
-  // Price + (optional) platform as labelled, side-by-side fields.
-  const fields: Record<string, unknown>[] = [
-    { type: "mrkdwn", text: `*Price*\n${price}` },
-  ];
-  if (input.platform) {
-    fields.push({ type: "mrkdwn", text: `*Platform*\n${esc(input.platform)}` });
+  // Price · platform, then the description. Keep the description short enough
+  // for a channel card (and well under Slack's 3000-char section text limit).
+  const priceLine = `*${price}*${input.platform ? `  ·  ${esc(input.platform)}` : ""}`;
+  const trimmed = input.description.trim();
+  const desc = trimmed.length > 600 ? `${trimmed.slice(0, 600)}…` : trimmed;
+  const sectionText = desc ? `${priceLine}\n\n${esc(desc)}` : priceLine;
+
+  // Small image as the section accessory — Slack renders it as a thumbnail to
+  // the right of the details (Block Kit has no left-image layout).
+  const section: Record<string, unknown> = {
+    type: "section",
+    text: { type: "mrkdwn", text: sectionText },
+  };
+  if (input.coverPath) {
+    section.accessory = {
+      type: "image",
+      image_url: publicImageUrl(input.coverPath),
+      alt_text: headerText,
+    };
   }
 
   const blocks: Record<string, unknown>[] = [
     { type: "header", text: { type: "plain_text", text: headerText, emoji: true } },
-    { type: "section", fields },
+    section,
   ];
-
-  // Full-width preview of the listing's first image, when there is one.
-  if (input.coverPath) {
-    blocks.push({
-      type: "image",
-      image_url: publicImageUrl(input.coverPath),
-      alt_text: headerText,
-    });
-  }
 
   blocks.push({
     type: "context",
