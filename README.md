@@ -13,8 +13,9 @@ payments, no middlemen.
 - **Supabase Storage** for listing images (signed direct uploads)
 - **Tailwind v4** — "arcade cartridge" dark theme
 - **Vitest** for the security-critical ownership test
-- Optional: **RAWG** game-metadata autofill, **Slack channel announcements**,
-  and Slack **@handle** display
+- Seller identity (name, **@handle**, avatar) fetched **live from Slack** and
+  cached — no profile data is stored, only the Slack user id
+- Optional: **RAWG** game-metadata autofill, **Slack channel announcements**
 
 ## Prerequisites
 
@@ -41,13 +42,18 @@ payments, no middlemen.
 - **Game-metadata autofill (RAWG):** a free key from <https://rawg.io/apidocs>
   enables the "Find game info" button on the sell form (fills title + cover).
   Set `RAWG_API_KEY`.
-- **Channel announcements + @handle (Slack bot):** add **Bot Token Scopes**
-  `chat:write` (announcements) and `users:read` (@handle display), **reinstall**
-  the app, and copy the **Bot User OAuth Token** (`xoxb-…`). Set `SLACK_BOT_TOKEN`
-  and `SLACK_ANNOUNCE_CHANNEL_ID` (a `C…` channel id). New listings then post a
-  card to that channel, and sellers show as their Slack **@handle** (backfilled
-  on each login; falls back to the display name until then). Both features are
-  no-ops until configured.
+- **Seller identity + channel announcements (Slack bot):** add **Bot Token
+  Scopes** `users:read` (seller name / @handle / avatar) and `chat:write`
+  (announcements), **reinstall** the app, and copy the **Bot User OAuth Token**
+  (`xoxb-…`). Set `SLACK_BOT_TOKEN`, and `SLACK_ANNOUNCE_CHANNEL_ID` (a `C…`
+  channel id) for announcements. Seller identity is read live from Slack
+  (`users.info`) and cached for an hour (`src/lib/slack-profile.ts`), so it's
+  always current and no profile data is persisted. **Important:** the bot must
+  be installed in the *same* workspace that sign-in is gated to
+  (`KOODIKLINIKKA_SLACK_TEAM_ID`), or `users.info` can't resolve members.
+  Without a valid token, sellers render as "Koodiklinikka member" and
+  announcements are skipped — contact links and ownership still work (they use
+  the stored Slack id).
 
 ## Setup
 
@@ -68,8 +74,8 @@ Fill `.env` (see `.env.example` for the full list):
 - `KOODIKLINIKKA_SLACK_TEAM_ID` — the workspace team id (`T…`)
 - `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
   `SUPABASE_STORAGE_BUCKET`
-- Optional: `RAWG_API_KEY` (metadata autofill), `SLACK_BOT_TOKEN` +
-  `SLACK_ANNOUNCE_CHANNEL_ID` (announcements + @handle)
+- Optional: `RAWG_API_KEY` (metadata autofill), `SLACK_BOT_TOKEN` (seller
+  identity via `users.info`), `SLACK_ANNOUNCE_CHANNEL_ID` (channel announcements)
 
 ## Security model
 
