@@ -26,15 +26,23 @@ export async function announceNewListing(input: AnnounceInput): Promise<void> {
   const base = process.env.AUTH_URL ?? "";
   const url = `${base}/listings/${input.id}`;
   const price = formatPrice(input.priceCents);
+
+  // Escape Slack mrkdwn metacharacters in user-supplied text so a crafted
+  // title/platform/name can't inject links or formatting into the channel.
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
   const meta = [CONDITION_LABELS[input.condition], input.platform]
     .filter(Boolean)
     .join(" · ");
 
+  // Title is plain (escaped) text — the clickable link lives only in the
+  // button below, whose url is our own constructed value, not user input.
   const section: Record<string, unknown> = {
     type: "section",
     text: {
       type: "mrkdwn",
-      text: `*<${url}|${input.title}>*\n${price} · ${meta}`,
+      text: `*${esc(input.title)}*\n${price} · ${esc(meta)}`,
     },
   };
   if (input.coverPath) {
@@ -50,7 +58,7 @@ export async function announceNewListing(input: AnnounceInput): Promise<void> {
     {
       type: "context",
       elements: [
-        { type: "mrkdwn", text: `Listed by ${input.sellerName}` },
+        { type: "mrkdwn", text: `Listed by ${esc(input.sellerName)}` },
       ],
     },
     {
@@ -74,7 +82,7 @@ export async function announceNewListing(input: AnnounceInput): Promise<void> {
       },
       body: JSON.stringify({
         channel,
-        text: `New listing: ${input.title} — ${price}`,
+        text: `New listing: ${esc(input.title)} — ${price}`,
         blocks,
         unfurl_links: false,
       }),
