@@ -13,23 +13,41 @@ payments, no middlemen.
 - **Supabase Storage** for listing images (signed direct uploads)
 - **Tailwind v4** — "arcade cartridge" dark theme
 - **Vitest** for the security-critical ownership test
+- Optional: **RAWG** game-metadata autofill, **Slack channel announcements**,
+  and Slack **@handle** display
 
 ## Prerequisites
 
 1. **Slack app** in the Koodiklinikka workspace (you need permission to install
    it). Create one at <https://api.slack.com/apps>:
-   - Enable **Sign in with Slack** (OpenID Connect).
+   - Enable **Sign in with Slack** (OpenID Connect) — required for login.
    - Redirect URL: `https://YOUR_DOMAIN/api/auth/callback/slack`
      (and `http://localhost:3000/api/auth/callback/slack` for local dev).
    - Copy the **Client ID** and **Client Secret**.
    - Note the workspace **team id** (`T…`) — used to lock sign-in to this
      workspace.
+   - **App icon:** upload `public/slack-app-icon.png` under
+     *Basic Information → Display Information*.
 2. **Supabase project** — gives you Postgres + Storage.
    - Create a **public** storage bucket named `listing-images`.
    - In the bucket settings, set a **file size limit (5 MB)** and restrict
      **allowed MIME types** to `image/jpeg, image/png, image/webp, image/avif`.
      This matters: images upload directly to Supabase via signed URLs, so the
      bucket config is the real server-side enforcement.
+   - RLS + storage policies are captured in `supabase/security.sql`.
+
+### Optional integrations
+
+- **Game-metadata autofill (RAWG):** a free key from <https://rawg.io/apidocs>
+  enables the "Find game info" button on the sell form (fills title + cover).
+  Set `RAWG_API_KEY`.
+- **Channel announcements + @handle (Slack bot):** add **Bot Token Scopes**
+  `chat:write` (announcements) and `users:read` (@handle display), **reinstall**
+  the app, and copy the **Bot User OAuth Token** (`xoxb-…`). Set `SLACK_BOT_TOKEN`
+  and `SLACK_ANNOUNCE_CHANNEL_ID` (a `C…` channel id). New listings then post a
+  card to that channel, and sellers show as their Slack **@handle** (backfilled
+  on each login; falls back to the display name until then). Both features are
+  no-ops until configured.
 
 ## Setup
 
@@ -50,6 +68,8 @@ Fill `.env` (see `.env.example` for the full list):
 - `KOODIKLINIKKA_SLACK_TEAM_ID` — the workspace team id (`T…`)
 - `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
   `SUPABASE_STORAGE_BUCKET`
+- Optional: `RAWG_API_KEY` (metadata autofill), `SLACK_BOT_TOKEN` +
+  `SLACK_ANNOUNCE_CHANNEL_ID` (announcements + @handle)
 
 ## Security model
 
@@ -94,9 +114,17 @@ check:
 4. Deploy. The build runs `prisma generate` automatically; run
    `npm run db:deploy` against the production database for migrations.
 
+## Deploy on tag
+
+A GitHub Actions workflow (`.github/workflows/release-deploy.yml`) deploys to
+Vercel production when a `v*` tag is pushed or a Release is published. Requires
+the `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` repo secrets.
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
 ## Roadmap (post-MVP)
 
-- Auto-fill game metadata (cover, platform) from IGDB / RAWG on listing
-  creation.
 - Image editing on existing listings; in-app messaging; categories beyond
   video games (the data model already supports it via `Listing.category`).
