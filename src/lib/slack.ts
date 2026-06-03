@@ -43,18 +43,21 @@ export async function announceNewListing(input: AnnounceInput): Promise<void> {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  const meta = input.platform ?? "";
+  // Title goes in a header block: plain_text, so no mrkdwn injection possible.
+  // Slack caps header text at 150 chars.
+  const headerText = (input.title || "New listing").slice(0, 150);
 
-  // Title is plain (escaped) text — the clickable link lives only in the
-  // button below, whose url is our own constructed value, not user input.
+  // Price + (optional) platform as labelled, side-by-side fields.
+  const fields: Record<string, unknown>[] = [
+    { type: "mrkdwn", text: `*Price*\n${price}` },
+  ];
+  if (input.platform) {
+    fields.push({ type: "mrkdwn", text: `*Platform*\n${esc(input.platform)}` });
+  }
+
   const blocks: Record<string, unknown>[] = [
-    {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: `*${esc(input.title)}*\n${price}${meta ? ` · ${esc(meta)}` : ""}`,
-      },
-    },
+    { type: "header", text: { type: "plain_text", text: headerText, emoji: true } },
+    { type: "section", fields },
   ];
 
   // Full-width preview of the listing's first image, when there is one.
@@ -62,7 +65,7 @@ export async function announceNewListing(input: AnnounceInput): Promise<void> {
     blocks.push({
       type: "image",
       image_url: publicImageUrl(input.coverPath),
-      alt_text: input.title,
+      alt_text: headerText,
     });
   }
 
@@ -79,8 +82,9 @@ export async function announceNewListing(input: AnnounceInput): Promise<void> {
       elements: [
         {
           type: "button",
-          text: { type: "plain_text", text: "View listing" },
+          text: { type: "plain_text", text: "View listing →", emoji: true },
           url: `${base}/listings/${input.id}`,
+          style: "primary",
         },
       ],
     });
