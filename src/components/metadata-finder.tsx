@@ -1,18 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Search, Sparkles } from "lucide-react";
+import { Images, Loader2, Search, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type Result = { title: string; year: string | null; coverUrl: string | null };
+type Result = { title: string; year: string | null; imageUrls: string[] };
 
 export function MetadataFinder({
   defaultQuery = "",
+  remainingSlots,
   onPick,
 }: {
   defaultQuery?: string;
-  onPick: (picked: { title: string; coverPath: string | null }) => void;
+  // How many more images the form can still accept.
+  remainingSlots: number;
+  onPick: (picked: { title: string; coverPaths: string[] }) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(defaultQuery);
@@ -47,22 +50,31 @@ export function MetadataFinder({
   async function pick(result: Result, idx: number) {
     setImportingIdx(idx);
     setError(null);
-    let coverPath: string | null = null;
+    // Import only as many as the form can still hold; cover comes first.
+    const toImport = result.imageUrls.slice(0, Math.max(0, remainingSlots));
+    let coverPaths: string[] = [];
     try {
-      if (result.coverUrl) {
-        const res = await fetch("/api/metadata/cover", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ coverUrl: result.coverUrl }),
-        });
-        if (res.ok) coverPath = ((await res.json()) as { path?: string }).path ?? null;
-      }
-    } catch {
-      // Non-fatal: still fill the title even if the cover import fails.
+      const imported = await Promise.all(
+        toImport.map(async (coverUrl) => {
+          try {
+            const res = await fetch("/api/metadata/cover", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ coverUrl }),
+            });
+            if (!res.ok) return null;
+            return ((await res.json()) as { path?: string }).path ?? null;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      coverPaths = imported.filter((p): p is string => p !== null);
     } finally {
       setImportingIdx(null);
     }
-    onPick({ title: result.title, coverPath });
+    // Non-fatal: still fill the title even if every image import failed.
+    onPick({ title: result.title, coverPaths });
     setOpen(false);
     setResults([]);
   }
@@ -127,10 +139,10 @@ export function MetadataFinder({
                 className="flex w-full items-center gap-3 rounded-lg border border-transparent p-2 text-left transition-colors hover:border-border hover:bg-surface-2 disabled:opacity-50"
               >
                 <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border border-border bg-surface-2">
-                  {r.coverUrl ? (
+                  {r.imageUrls[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={r.coverUrl}
+                      src={r.imageUrls[0]}
                       alt=""
                       className="h-full w-full object-cover"
                     />
@@ -140,11 +152,15 @@ export function MetadataFinder({
                   <span className="block truncate font-medium text-ink">
                     {r.title}
                   </span>
-                  {r.year ? (
-                    <span className="block font-mono text-xs text-muted">
-                      {r.year}
-                    </span>
-                  ) : null}
+                  <span className="flex items-center gap-2 font-mono text-xs text-muted">
+                    {r.year ? <span>{r.year}</span> : null}
+                    {r.imageUrls.length > 1 ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Images className="h-3 w-3" />
+                        {r.imageUrls.length}
+                      </span>
+                    ) : null}
+                  </span>
                 </span>
                 {importingIdx === idx ? (
                   <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent" />

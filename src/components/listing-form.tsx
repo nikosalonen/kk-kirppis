@@ -106,14 +106,17 @@ export function ListingForm({
 
   function onPickMetadata({
     title: pickedTitle,
-    coverPath,
+    coverPaths,
   }: {
     title: string;
-    coverPath: string | null;
+    coverPaths: string[];
   }) {
     setTitle(pickedTitle.slice(0, 120));
-    if (coverPath && totalImages < MAX_IMAGES) {
-      setImportedPaths((prev) => [...prev, coverPath]);
+    if (coverPaths.length > 0) {
+      setImportedPaths((prev) => [
+        ...prev,
+        ...coverPaths.slice(0, Math.max(0, MAX_IMAGES - totalImages)),
+      ]);
     }
   }
 
@@ -136,7 +139,11 @@ export function ListingForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {allowImages ? (
-        <MetadataFinder defaultQuery={title} onPick={onPickMetadata} />
+        <MetadataFinder
+          defaultQuery={title}
+          remainingSlots={MAX_IMAGES - totalImages}
+          onPick={onPickMetadata}
+        />
       ) : null}
 
       <Field label="Title" htmlFor="title">
