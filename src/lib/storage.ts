@@ -77,3 +77,26 @@ export async function deleteImages(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
   await admin().storage.from(BUCKET).remove(paths);
 }
+
+/**
+ * Upload already-in-hand image bytes (e.g. a fetched game cover) to the bucket
+ * server-side, returning the stored object path. Type must be allowed.
+ */
+export async function uploadImageBytes(
+  userId: string,
+  bytes: Buffer | Uint8Array,
+  contentType: string,
+): Promise<string> {
+  const ext = EXT_BY_TYPE[contentType];
+  if (!ext) {
+    throw new Error(`Unsupported image type: ${contentType}`);
+  }
+  const path = `listings/${userId}/${randomUUID()}.${ext}`;
+  const { error } = await admin()
+    .storage.from(BUCKET)
+    .upload(path, bytes, { contentType, upsert: false });
+  if (error) {
+    throw new Error(`Failed to upload image: ${error.message}`);
+  }
+  return path;
+}

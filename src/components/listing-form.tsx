@@ -6,8 +6,10 @@ import { ImagePlus, Loader2, X } from "lucide-react";
 import type { FormState } from "@/app/(app)/listings/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { MetadataFinder } from "@/components/metadata-finder";
 import { CONDITIONS, MAX_IMAGES } from "@/lib/validation";
 import { CONDITION_LABELS } from "@/lib/format";
+import { publicImageUrl } from "@/lib/image-url";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -58,10 +60,15 @@ export function ListingForm({
 }) {
   const [state, formAction] = useActionState(action, undefined);
   const [isPending, startTransition] = useTransition();
+  const [title, setTitle] = useState(defaults?.title ?? "");
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  // Covers already uploaded server-side (imported via the metadata finder).
+  const [importedPaths, setImportedPaths] = useState<string[]>([]);
   const [clientError, setClientError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const totalImages = files.length + importedPaths.length;
 
   function addFiles(selected: FileList | null) {
     if (!selected) return;
@@ -69,7 +76,7 @@ export function ListingForm({
     const next = [...files];
     const nextPreviews = [...previews];
     for (const file of Array.from(selected)) {
-      if (next.length >= MAX_IMAGES) {
+      if (next.length + importedPaths.length >= MAX_IMAGES) {
         setClientError(`You can add up to ${MAX_IMAGES} images.`);
         break;
       }
@@ -95,13 +102,32 @@ export function ListingForm({
     setPreviews(previews.filter((_, i) => i !== index));
   }
 
+  function removeImported(index: number) {
+    setImportedPaths(importedPaths.filter((_, i) => i !== index));
+  }
+
+  function onPickMetadata({
+    title: pickedTitle,
+    coverPath,
+  }: {
+    title: string;
+    coverPath: string | null;
+  }) {
+    setTitle(pickedTitle.slice(0, 120));
+    if (coverPath && totalImages < MAX_IMAGES) {
+      setImportedPaths((prev) => [...prev, coverPath]);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setClientError(null);
     const formData = new FormData(e.currentTarget);
     try {
-      const paths = await uploadImages(files);
-      for (const path of paths) formData.append("imagePaths", path);
+      const uploaded = await uploadImages(files);
+      for (const path of [...importedPaths, ...uploaded]) {
+        formData.append("imagePaths", path);
+      }
     } catch (err) {
       setClientError(err instanceof Error ? err.message : "Upload failed.");
       return;
@@ -109,17 +135,20 @@ export function ListingForm({
     startTransition(() => formAction(formData));
   }
 
-  const busy = isPending;
-
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {allowImages ? (
+        <MetadataFinder defaultQuery={title} onPick={onPickMetadata} />
+      ) : null}
+
       <Field label="Title" htmlFor="title">
         <Input
           id="title"
           name="title"
           required
           maxLength={120}
-          defaultValue={defaults?.title}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. The Legend of Zelda: Tears of the Kingdom"
         />
       </Field>
@@ -181,6 +210,28 @@ export function ListingForm({
             Photos
           </span>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+            {importedPaths.map((path, i) => (
+              <div
+                key={path}
+                className="group relative aspect-square overflow-hidden rounded-lg border border-accent/40 bg-surface-2"
+              >
+                <Image
+                  src={publicImageUrl(path)}
+                  alt=""
+                  fill
+                  sizes="160px"
+                  className="object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeImported(i)}
+                  className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-md bg-bg/80 text-ink opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
+                  aria-label="Remove image"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
             {previews.map((src, i) => (
               <div
                 key={src}
@@ -197,7 +248,7 @@ export function ListingForm({
                 </button>
               </div>
             ))}
-            {files.length < MAX_IMAGES ? (
+            {totalImages < MAX_IMAGES ? (
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
@@ -228,8 +279,8 @@ export function ListingForm({
       )}
 
       <div className="flex items-center gap-3">
-        <Button type="submit" size="lg" disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+        <Button type="submit" size="lg" disabled={isPending}>
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           {submitLabel}
         </Button>
       </div>
