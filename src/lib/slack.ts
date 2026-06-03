@@ -1,15 +1,45 @@
 import "server-only";
-import type { Condition } from "@prisma/client";
-import { CONDITION_LABELS, formatPrice } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 import { publicImageUrl } from "@/lib/image-url";
+
+/**
+ * Look up a member's Slack @handle via users.info. Needs the bot token with
+ * the `users:read` scope. Best-effort: returns null if not configured or on
+ * any error, so callers fall back to the display name.
+ */
+export async function fetchSlackHandle(
+  slackUserId: string,
+): Promise<string | null> {
+  const token = process.env.SLACK_BOT_TOKEN;
+  if (!token) return null;
+  try {
+    const res = await fetch(
+      `https://slack.com/api/users.info?user=${encodeURIComponent(slackUserId)}`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    const data = (await res.json()) as {
+      ok: boolean;
+      error?: string;
+      user?: { name?: string; profile?: { display_name?: string } };
+    };
+    if (!data.ok) {
+      console.error("[slack handle] users.info failed:", data.error);
+      return null;
+    }
+    const handle = data.user?.profile?.display_name || data.user?.name || "";
+    return handle.length > 0 ? handle : null;
+  } catch (err) {
+    console.error("[slack handle] error:", err);
+    return null;
+  }
+}
 
 type AnnounceInput = {
   id: string;
   title: string;
   priceCents: number;
-  condition: Condition;
   platform?: string | null;
-  sellerName: string;
+  sellerLabel: string;
   coverPath?: string | null;
 };
 
@@ -32,9 +62,7 @@ export async function announceNewListing(input: AnnounceInput): Promise<void> {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  const meta = [CONDITION_LABELS[input.condition], input.platform]
-    .filter(Boolean)
-    .join(" · ");
+  const meta = input.platform ?? "";
 
   // Title is plain (escaped) text — the clickable link lives only in the
   // button below, whose url is our own constructed value, not user input.
@@ -42,7 +70,7 @@ export async function announceNewListing(input: AnnounceInput): Promise<void> {
     type: "section",
     text: {
       type: "mrkdwn",
-      text: `*${esc(input.title)}*\n${price} · ${esc(meta)}`,
+      text: `*${esc(input.title)}*\n${price}${meta ? ` · ${esc(meta)}` : ""}`,
     },
   };
   if (input.coverPath) {
@@ -58,7 +86,7 @@ export async function announceNewListing(input: AnnounceInput): Promise<void> {
     {
       type: "context",
       elements: [
-        { type: "mrkdwn", text: `Listed by ${esc(input.sellerName)}` },
+        { type: "mrkdwn", text: `Listed by ${esc(input.sellerLabel)}` },
       ],
     },
     {

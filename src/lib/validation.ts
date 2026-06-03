@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-export const CONDITIONS = ["NEW", "LIKE_NEW", "GOOD", "ACCEPTABLE"] as const;
 export const MAX_IMAGES = 6;
 
 // A Supabase Storage object path we generated server-side, e.g.
@@ -21,7 +20,6 @@ export const listingInputSchema = z.object({
     .number()
     .min(0, "Price cannot be negative")
     .max(100000, "Price is too high"),
-  condition: z.enum(CONDITIONS),
   platform: z.string().trim().max(40).optional().or(z.literal("")),
   category: z.string().trim().min(1).max(40).default("videogame"),
   imagePaths: z.array(objectPath).max(MAX_IMAGES).default([]),

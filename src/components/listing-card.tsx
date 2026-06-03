@@ -2,16 +2,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { ImageOff } from "lucide-react";
 import type { Listing, ListingImage, User } from "@prisma/client";
-import { Badge } from "@/components/ui/badge";
-import { CONDITION_LABELS, formatPrice } from "@/lib/format";
+import { formatPrice, sellerLabel } from "@/lib/format";
 import { publicImageUrl } from "@/lib/image-url";
 
 type CardListing = Pick<
   Listing,
-  "id" | "title" | "priceCents" | "condition" | "platform" | "status"
+  "id" | "title" | "priceCents" | "platform" | "status"
 > & {
   images: Pick<ListingImage, "url">[];
-  seller: Pick<User, "name" | "image">;
+  seller: Pick<User, "name" | "handle" | "image">;
 };
 
 export function ListingCard({ listing }: { listing: CardListing }) {
@@ -68,13 +67,12 @@ export function ListingCard({ listing }: { listing: CardListing }) {
               {listing.seller.name.slice(0, 1).toUpperCase()}
             </span>
           )}
-          <span className="truncate">{listing.seller.name}</span>
+          <span className="truncate">{sellerLabel(listing.seller)}</span>
         </div>
         <div className="mt-auto flex items-center justify-between gap-2">
           <span className="font-mono text-lg font-bold text-accent">
             {formatPrice(listing.priceCents)}
           </span>
-          <Badge>{CONDITION_LABELS[listing.condition]}</Badge>
         </div>
       </div>
     </Link>

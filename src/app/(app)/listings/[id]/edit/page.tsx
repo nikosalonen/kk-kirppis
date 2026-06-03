@@ -40,7 +40,6 @@ export default async function EditListingPage({
           title: listing.title,
           description: listing.description,
           priceEuros: (listing.priceCents / 100).toString(),
-          condition: listing.condition,
           platform: listing.platform ?? "",
         }}
         submitLabel="Save changes"

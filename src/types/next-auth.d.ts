@@ -7,6 +7,7 @@ declare module "next-auth" {
     user: {
       id: string;
       slackId: string;
+      handle: string | null;
     } & DefaultSession["user"];
   }
 }
@@ -15,5 +16,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     uid?: string;
     slackId?: string;
+    handle?: string;
   }
 }

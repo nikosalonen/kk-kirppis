@@ -1,5 +1,3 @@
-import type { Condition } from "@prisma/client";
-
 const priceFormatter = new Intl.NumberFormat("fi-FI", {
   style: "currency",
   currency: "EUR",
@@ -9,12 +7,13 @@ export function formatPrice(cents: number): string {
   return priceFormatter.format(cents / 100);
 }
 
-export const CONDITION_LABELS: Record<Condition, string> = {
-  NEW: "New",
-  LIKE_NEW: "Like new",
-  GOOD: "Good",
-  ACCEPTABLE: "Acceptable",
-};
+/** Public-facing seller label: the Slack @handle when known, else the name. */
+export function sellerLabel(seller: {
+  name: string;
+  handle?: string | null;
+}): string {
+  return seller.handle ? `@${seller.handle}` : seller.name;
+}
 
 /**
  * Deep link that opens a Slack DM with the seller inside the workspace.

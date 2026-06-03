@@ -5,10 +5,9 @@ import Image from "next/image";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import type { FormState } from "@/app/(app)/listings/actions";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { Field, Input, Textarea } from "@/components/ui/input";
 import { MetadataFinder } from "@/components/metadata-finder";
-import { CONDITIONS, MAX_IMAGES } from "@/lib/validation";
-import { CONDITION_LABELS } from "@/lib/format";
+import { MAX_IMAGES } from "@/lib/validation";
 import { publicImageUrl } from "@/lib/image-url";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
@@ -18,7 +17,6 @@ type Defaults = {
   title?: string;
   description?: string;
   priceEuros?: string;
-  condition?: string;
   platform?: string;
 };
 
@@ -167,33 +165,26 @@ export function ListingForm({
             placeholder="25.00"
           />
         </Field>
-        <Field label="Condition" htmlFor="condition">
-          <Select
-            id="condition"
-            name="condition"
-            required
-            defaultValue={defaults?.condition ?? "GOOD"}
-          >
-            {CONDITIONS.map((c) => (
-              <option key={c} value={c}>
-                {CONDITION_LABELS[c]}
-              </option>
-            ))}
-          </Select>
+        <Field
+          label="Platform"
+          htmlFor="platform"
+          hint="Optional — e.g. PS5, Switch, PC"
+        >
+          <Input
+            id="platform"
+            name="platform"
+            maxLength={40}
+            defaultValue={defaults?.platform}
+            placeholder="Switch"
+          />
         </Field>
       </div>
 
-      <Field label="Platform" htmlFor="platform" hint="Optional — e.g. PS5, Switch, PC">
-        <Input
-          id="platform"
-          name="platform"
-          maxLength={40}
-          defaultValue={defaults?.platform}
-          placeholder="Switch"
-        />
-      </Field>
-
-      <Field label="Description" htmlFor="description">
+      <Field
+        label="Description"
+        htmlFor="description"
+        hint="Mention any wear, scratches, or missing parts here."
+      >
         <Textarea
           id="description"
           name="description"

@@ -7,6 +7,7 @@ import { getOwnedListingOrThrow } from "@/lib/listings";
 import { prisma } from "@/lib/prisma";
 import { deleteImages } from "@/lib/storage";
 import { announceNewListing } from "@/lib/slack";
+import { sellerLabel } from "@/lib/format";
 import { eurosToCents, listingInputSchema } from "@/lib/validation";
 
 export type FormState = { error?: string } | undefined;
@@ -16,7 +17,6 @@ function parseListing(formData: FormData) {
     title: formData.get("title"),
     description: formData.get("description"),
     priceEuros: formData.get("priceEuros"),
-    condition: formData.get("condition"),
     platform: formData.get("platform") ?? "",
     category: formData.get("category") ?? "videogame",
     imagePaths: formData.getAll("imagePaths").map(String),
@@ -39,7 +39,6 @@ export async function createListing(
       title: data.title,
       description: data.description,
       priceCents: eurosToCents(data.priceEuros),
-      condition: data.condition,
       category: data.category,
       platform: data.platform ? data.platform : null,
       sellerId: user.id,
@@ -54,9 +53,8 @@ export async function createListing(
     id: listing.id,
     title: listing.title,
     priceCents: listing.priceCents,
-    condition: listing.condition,
     platform: listing.platform,
-    sellerName: user.name ?? "A Koodiklinikka member",
+    sellerLabel: sellerLabel({ name: user.name ?? "A member", handle: user.handle }),
     coverPath: data.imagePaths[0] ?? null,
   });
 
@@ -86,7 +84,6 @@ export async function updateListing(
       title: data.title,
       description: data.description,
       priceCents: eurosToCents(data.priceEuros),
-      condition: data.condition,
       platform: data.platform ? data.platform : null,
     },
   });

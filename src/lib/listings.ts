@@ -1,9 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import type { Condition } from "@prisma/client";
 
 export type ListingFilters = {
   q?: string;
-  condition?: Condition;
   platform?: string;
 };
 
@@ -19,7 +17,6 @@ export async function getActiveListings(filters: ListingFilters = {}) {
       ...(filters.q
         ? { title: { contains: filters.q, mode: "insensitive" as const } }
         : {}),
-      ...(filters.condition ? { condition: filters.condition } : {}),
       ...(filters.platform ? { platform: filters.platform } : {}),
     },
     include: withImagesAndSeller,

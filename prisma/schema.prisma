@@ -15,7 +15,8 @@ datasource db {
 model User {
   id        String    @id @default(cuid())
   slackId   String    @unique // Slack user id (the OIDC `sub` claim)
-  name      String
+  name      String // Slack display/real name (fallback)
+  handle    String? // Slack @handle, fetched via users.info (preferred for display)
   image     String?
   listings  Listing[]
   createdAt DateTime  @default(now())
@@ -26,7 +27,6 @@ model Listing {
   title       String
   description String
   priceCents  Int // integer cents, never floats
-  condition   Condition
   category    String        @default("videogame") // generic / future-proof
   platform    String? // e.g. PS5, Switch (videogame-specific, optional)
   status      ListingStatus @default(ACTIVE)
@@ -48,13 +48,6 @@ model ListingImage {
   sortOrder Int     @default(0)
 
   @@index([listingId])
-}
-
-enum Condition {
-  NEW
-  LIKE_NEW
-  GOOD
-  ACCEPTABLE
 }
 
 enum ListingStatus {

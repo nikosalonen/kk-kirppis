@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ImageOff, MessageCircle, Pencil } from "lucide-react";
 import { auth } from "@/auth";
 import { getListing } from "@/lib/listings";
-import { CONDITION_LABELS, formatPrice, slackDmUrl } from "@/lib/format";
+import { formatPrice, sellerLabel, slackDmUrl } from "@/lib/format";
 import { publicImageUrl } from "@/lib/image-url";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -86,7 +86,6 @@ export default async function ListingPage({
             <Badge tone={sold ? "danger" : "accent"}>
               {sold ? "Sold" : "Available"}
             </Badge>
-            <Badge>{CONDITION_LABELS[listing.condition]}</Badge>
             {listing.platform ? <Badge>{listing.platform}</Badge> : null}
           </div>
 
@@ -116,7 +115,7 @@ export default async function ListingPage({
               </span>
             )}
             <div className="text-sm">
-              <div className="font-medium">{listing.seller.name}</div>
+              <div className="font-medium">{sellerLabel(listing.seller)}</div>
               <div className="text-muted">Seller</div>
             </div>
           </div>
@@ -154,7 +153,7 @@ export default async function ListingPage({
               className={buttonVariants({ variant: "primary", size: "lg" })}
             >
               <MessageCircle className="h-5 w-5" />
-              Contact {listing.seller.name.split(" ")[0]} on Slack
+              Contact {sellerLabel(listing.seller)} on Slack
             </a>
           )}
         </div>

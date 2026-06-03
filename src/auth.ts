@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Slack from "next-auth/providers/slack";
 import { prisma } from "@/lib/prisma";
+import { fetchSlackHandle } from "@/lib/slack";
 
 // Fail closed: if the allowed team id is not configured, no one can sign in.
 const ALLOWED_TEAM_ID = process.env.KOODIKLINIKKA_SLACK_TEAM_ID;
@@ -38,13 +39,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (slackId) {
           const name = claim(profile, "name") ?? "Koodiklinikka member";
           const image = claim(profile, "picture") ?? null;
+          // Best-effort @handle lookup (needs bot token + users:read).
+          const handle = await fetchSlackHandle(slackId);
           const user = await prisma.user.upsert({
             where: { slackId },
-            create: { slackId, name, image },
-            update: { name, image },
+            create: { slackId, name, image, handle },
+            // Only overwrite handle when we actually got one, so a transient
+            // lookup failure doesn't wipe a previously-stored handle.
+            update: { name, image, ...(handle ? { handle } : {}) },
           });
           token.uid = user.id;
           token.slackId = slackId;
+          token.handle = user.handle ?? undefined;
         }
       }
       return token;
@@ -52,6 +58,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (token.uid) session.user.id = String(token.uid);
       if (token.slackId) session.user.slackId = String(token.slackId);
+      session.user.handle = token.handle ? String(token.handle) : null;
       return session;
     },
   },

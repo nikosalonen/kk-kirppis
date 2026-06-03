@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { PrismaClient, type Condition } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
@@ -9,35 +9,30 @@ const SAMPLE: Array<{
   title: string;
   description: string;
   priceCents: number;
-  condition: Condition;
   platform: string;
 }> = [
   {
     title: "The Legend of Zelda: Tears of the Kingdom",
     description: "Played through once, cartridge and case in great shape.",
     priceCents: 4500,
-    condition: "LIKE_NEW",
     platform: "Switch",
   },
   {
     title: "Elden Ring",
     description: "Disc only, no scratches. Finished it, time to pass it on.",
     priceCents: 3000,
-    condition: "GOOD",
     platform: "PS5",
   },
   {
     title: "Hollow Knight (physical)",
     description: "Collector's edition, complete with pin and manual.",
     priceCents: 6000,
-    condition: "NEW",
     platform: "Switch",
   },
   {
     title: "Half-Life 2 (orange box)",
     description: "Classic. Some shelf wear on the box, disc works perfectly.",
     priceCents: 1500,
-    condition: "ACCEPTABLE",
     platform: "PC",
   },
 ];

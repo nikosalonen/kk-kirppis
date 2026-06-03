@@ -1,26 +1,16 @@
 import Link from "next/link";
 import { Search, PackageOpen } from "lucide-react";
-import type { Condition } from "@prisma/client";
 import { getActiveListings, getActivePlatforms } from "@/lib/listings";
 import { ListingCard } from "@/components/listing-card";
 import { Input, Select } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { CONDITIONS } from "@/lib/validation";
-import { CONDITION_LABELS } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{
   q?: string;
-  condition?: string;
   platform?: string;
 }>;
-
-function parseCondition(value?: string): Condition | undefined {
-  return CONDITIONS.includes(value as Condition)
-    ? (value as Condition)
-    : undefined;
-}
 
 export default async function HomePage({
   searchParams,
@@ -29,15 +19,14 @@ export default async function HomePage({
 }) {
   const sp = await searchParams;
   const q = sp.q?.trim() || undefined;
-  const condition = parseCondition(sp.condition);
   const platform = sp.platform?.trim() || undefined;
 
   const [listings, platforms] = await Promise.all([
-    getActiveListings({ q, condition, platform }),
+    getActiveListings({ q, platform }),
     getActivePlatforms(),
   ]);
 
-  const hasFilters = Boolean(q || condition || platform);
+  const hasFilters = Boolean(q || platform);
 
   return (
     <div className="flex flex-col gap-8">
@@ -70,19 +59,6 @@ export default async function HomePage({
             aria-label="Search titles"
           />
         </div>
-        <Select
-          name="condition"
-          defaultValue={condition ?? ""}
-          aria-label="Condition"
-          className="sm:w-44"
-        >
-          <option value="">Any condition</option>
-          {CONDITIONS.map((c) => (
-            <option key={c} value={c}>
-              {CONDITION_LABELS[c]}
-            </option>
-          ))}
-        </Select>
         <Select
           name="platform"
           defaultValue={platform ?? ""}
