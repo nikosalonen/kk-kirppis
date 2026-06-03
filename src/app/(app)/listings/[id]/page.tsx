@@ -1,7 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ImageOff, MessageCircle, Pencil } from "lucide-react";
+import { ArrowLeft, MessageCircle, Pencil } from "lucide-react";
 import { auth } from "@/auth";
 import { getListing } from "@/lib/listings";
 import { getSlackProfile } from "@/lib/slack-profile";
@@ -9,6 +8,7 @@ import { formatPrice, sellerLabel, slackDmUrl } from "@/lib/format";
 import { publicImageUrl } from "@/lib/image-url";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ImageGallery } from "@/components/image-gallery";
 import { deleteListing, setListingStatus } from "@/app/(app)/listings/actions";
 import { DeleteListingButton } from "@/components/delete-listing-button";
 
@@ -30,7 +30,6 @@ export default async function ListingPage({
 
   const isOwner = session?.user?.id === listing.sellerId;
   const sold = listing.status === "SOLD";
-  const [cover, ...rest] = listing.images;
   const seller = await getSlackProfile(listing.seller.slackId);
 
   return (
@@ -45,42 +44,11 @@ export default async function ListingPage({
 
       <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
         {/* Gallery */}
-        <div className="flex flex-col gap-3">
-          <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius)] border border-border bg-surface-2">
-            {cover ? (
-              <Image
-                src={publicImageUrl(cover.url)}
-                alt={listing.title}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 600px"
-                className={`object-cover ${sold ? "opacity-50 grayscale" : ""}`}
-              />
-            ) : (
-              <div className="grid h-full place-items-center text-border">
-                <ImageOff className="h-12 w-12" />
-              </div>
-            )}
-          </div>
-          {rest.length > 0 ? (
-            <div className="grid grid-cols-4 gap-3">
-              {rest.map((img) => (
-                <div
-                  key={img.id}
-                  className="relative aspect-square overflow-hidden rounded-lg border border-border bg-surface-2"
-                >
-                  <Image
-                    src={publicImageUrl(img.url)}
-                    alt=""
-                    fill
-                    sizes="120px"
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
+        <ImageGallery
+          images={listing.images.map((img) => publicImageUrl(img.url))}
+          title={listing.title}
+          sold={sold}
+        />
 
         {/* Details */}
         <div className="flex flex-col gap-5">
