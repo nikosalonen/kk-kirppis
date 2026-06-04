@@ -1,0 +1,6 @@
+# Keep local secrets out of the build upload. The Vercel CLI does not honor
+# .gitignore, so without this a local `vercel deploy` ships .env into the build
+# context. Runtime still uses Vercel's own (dashboard) env vars.
+.env
+.env.local
+.env.*.local
