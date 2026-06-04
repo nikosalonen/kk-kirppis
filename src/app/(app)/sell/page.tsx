@@ -19,6 +19,7 @@ export default function SellPage() {
         action={createListing}
         allowImages
         showGameFinder
+        showToriImport
         submitLabel="Publish listing"
       />
     </div>

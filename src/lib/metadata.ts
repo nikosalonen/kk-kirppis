@@ -15,14 +15,19 @@ export type GameResult = {
   platforms: GamePlatform[];
 };
 
-// IGDB serves every cover/screenshot image from this host. The cover-import
-// route only fetches URLs on this host (SSRF guard) — never arbitrary input.
+// IGDB serves every cover/screenshot image from this host (used to build cover
+// URLs below).
 const IGDB_IMAGE_HOST = "images.igdb.com";
+
+// Image CDNs the cover-import route is allowed to fetch from (SSRF guard — it
+// never fetches arbitrary input): IGDB covers/screenshots and tori.fi listing
+// photos (for the tori import).
+const ALLOWED_IMAGE_HOSTS = new Set([IGDB_IMAGE_HOST, "img.tori.net"]);
 
 export function isAllowedCoverHost(url: string): boolean {
   try {
     const u = new URL(url);
-    return u.protocol === "https:" && u.hostname === IGDB_IMAGE_HOST;
+    return u.protocol === "https:" && ALLOWED_IMAGE_HOSTS.has(u.hostname);
   } catch {
     return false;
   }
