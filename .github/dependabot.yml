@@ -10,6 +10,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    # Keep @types/node locked to the Node major pinned in .nvmrc (24); reject
+    # major bumps (e.g. v25) so the type defs stay in step with the runtime.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       production-minor-patch:
         dependency-type: production
