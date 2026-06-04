@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { SiteHeader } from "@/components/site-header";
 
@@ -23,6 +24,14 @@ export default async function AppLayout({
             <p>
               Made by{" "}
               <span className="font-medium text-ink">@einomies</span>
+            </p>
+            <p>
+              <Link
+                href="/privacy"
+                className="text-muted underline-offset-4 transition-colors hover:text-accent hover:underline"
+              >
+                Privacy policy
+              </Link>
             </p>
           </div>
           <a
