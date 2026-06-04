@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   ChevronLeft,
@@ -24,6 +24,8 @@ export function ImageGallery({
 }) {
   // Index of the image shown in the lightbox, or null when it's closed.
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const isOpen = openIdx !== null;
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
 
   const close = useCallback(() => setOpenIdx(null), []);
   const step = useCallback(
@@ -50,6 +52,15 @@ export function ImageGallery({
       window.removeEventListener("keydown", onKey);
     };
   }, [openIdx, close, step]);
+
+  // Move focus into the lightbox on open and return it to the trigger on close.
+  // Keyed on open/closed (not openIdx) so arrow-key navigation doesn't refocus.
+  useEffect(() => {
+    if (!isOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeBtnRef.current?.focus();
+    return () => previouslyFocused?.focus?.();
+  }, [isOpen]);
 
   if (images.length === 0) {
     return (
@@ -115,6 +126,7 @@ export function ImageGallery({
           onClick={close}
         >
           <button
+            ref={closeBtnRef}
             type="button"
             onClick={close}
             className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-md bg-surface/80 text-ink transition-colors hover:text-accent"

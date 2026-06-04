@@ -17,6 +17,15 @@ type AnnounceInput = {
  * one. Slack Block Kit buttons require an absolute URL, so we never build a
  * button from a relative path — we omit it instead.
  */
+/**
+ * Escape Slack mrkdwn metacharacters in user-supplied text so a crafted
+ * title/platform/name can't inject links or formatting into the channel.
+ * `&` must be replaced first so the `<`/`>` replacements aren't double-escaped.
+ */
+export function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function siteBaseUrl(): string | null {
   const explicit = process.env.AUTH_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
   if (explicit && /^https?:\/\//.test(explicit)) {
@@ -38,11 +47,6 @@ export async function announceNewListing(input: AnnounceInput): Promise<void> {
 
   const base = siteBaseUrl();
   const price = formatPrice(input.priceCents);
-
-  // Escape Slack mrkdwn metacharacters in user-supplied text so a crafted
-  // title/platform/name can't inject links or formatting into the channel.
-  const esc = (s: string) =>
-    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
   // Title goes in a header block: plain_text, so no mrkdwn injection possible.
   // Slack caps header text at 150 chars.

@@ -64,6 +64,11 @@ export function ListingForm({
   // Covers already uploaded server-side (imported via the metadata finder).
   const [importedPaths, setImportedPaths] = useState<string[]>([]);
   const [clientError, setClientError] = useState<string | null>(null);
+  // Guards the upload window before the server action starts. `isPending` only
+  // covers the action transition, leaving the upload window unguarded — a second
+  // click there would re-upload and create a duplicate listing. Once uploads
+  // finish, `isPending` takes over re-entry protection (see disabled= below).
+  const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const totalImages = files.length + importedPaths.length;
@@ -122,6 +127,8 @@ export function ListingForm({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submitting) return; // ignore re-entry while a submit is in flight
+    setSubmitting(true);
     setClientError(null);
     const formData = new FormData(e.currentTarget);
     try {
@@ -132,6 +139,8 @@ export function ListingForm({
     } catch (err) {
       setClientError(err instanceof Error ? err.message : "Upload failed.");
       return;
+    } finally {
+      setSubmitting(false);
     }
     startTransition(() => formAction(formData));
   }
@@ -277,8 +286,10 @@ export function ListingForm({
       )}
 
       <div className="flex items-center gap-3">
-        <Button type="submit" size="lg" disabled={isPending}>
-          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+        <Button type="submit" size="lg" disabled={isPending || submitting}>
+          {isPending || submitting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : null}
           {submitLabel}
         </Button>
       </div>
