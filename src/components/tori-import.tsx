@@ -21,12 +21,13 @@ export function ToriImport({
 }) {
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function run() {
     const u = url.trim();
-    if (!u) return;
+    if (!u || !agreed) return;
     setLoading(true);
     setError(null);
     try {
@@ -61,6 +62,7 @@ export function ToriImport({
       });
       setOpen(false);
       setUrl("");
+      setAgreed(false);
     } catch {
       setError(
         "Couldn't import that listing. Check the link, or fill the form in manually.",
@@ -105,7 +107,12 @@ export function ToriImport({
             autoFocus
           />
         </div>
-        <Button type="button" size="md" onClick={run} disabled={loading}>
+        <Button
+          type="button"
+          size="md"
+          onClick={run}
+          disabled={loading || !agreed}
+        >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Import"}
         </Button>
         <Button
@@ -117,6 +124,15 @@ export function ToriImport({
           Cancel
         </Button>
       </div>
+      <label className="flex w-fit items-center gap-2 text-sm text-muted">
+        <input
+          type="checkbox"
+          checked={agreed}
+          onChange={(e) => setAgreed(e.target.checked)}
+          className="h-4 w-4 accent-accent"
+        />
+        I swear this is my tori.fi listing
+      </label>
       {error ? <p className="text-sm text-muted">{error}</p> : null}
       <p className="text-xs text-muted/80">
         Pulls the title, description, price, and cover photo. Review and edit
