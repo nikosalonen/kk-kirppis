@@ -4,6 +4,7 @@ import { ImageOff } from "lucide-react";
 import type { Listing, ListingImage, User } from "@prisma/client";
 import { formatPrice, sellerLabel } from "@/lib/format";
 import { publicImageUrl } from "@/lib/image-url";
+import { resolvePlatform } from "@/lib/platforms";
 import { getSlackProfile } from "@/lib/slack-profile";
 
 type CardListing = Pick<
@@ -24,6 +25,7 @@ export async function ListingCard({
 }) {
   const cover = listing.images[0];
   const sold = listing.status === "SOLD";
+  const platform = resolvePlatform(listing.platform);
   const seller = await getSlackProfile(listing.seller.slackId);
 
   return (
@@ -53,10 +55,26 @@ export async function ListingCard({
             Sold
           </span>
         ) : null}
-        {listing.platform ? (
-          <span className="absolute right-3 top-3 rounded-md bg-bg/80 px-2 py-0.5 font-mono text-xs uppercase tracking-wider text-ink backdrop-blur-sm">
-            {listing.platform}
-          </span>
+        {platform ? (
+          platform.logoUrl ? (
+            <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-md bg-white/90 px-2 py-1 shadow-sm backdrop-blur-sm">
+              {/* Plain <img>: tiny external PNG, heavily CDN-cached; no need to
+                  route it through next/image or allow the host in next.config. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={platform.logoUrl}
+                alt=""
+                className="h-4 w-auto max-w-[48px] object-contain"
+              />
+              <span className="font-mono text-xs font-medium uppercase tracking-wider text-bg">
+                {platform.label}
+              </span>
+            </span>
+          ) : (
+            <span className="absolute right-3 top-3 rounded-md bg-bg/80 px-2 py-0.5 font-mono text-xs uppercase tracking-wider text-ink backdrop-blur-sm">
+              {platform.label}
+            </span>
+          )
         ) : null}
       </div>
 

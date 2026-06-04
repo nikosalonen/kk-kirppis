@@ -6,6 +6,7 @@ import { getListing } from "@/lib/listings";
 import { getSlackProfile } from "@/lib/slack-profile";
 import { formatPrice, sellerLabel, slackDmUrl } from "@/lib/format";
 import { publicImageUrl } from "@/lib/image-url";
+import { resolvePlatform } from "@/lib/platforms";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ImageGallery } from "@/components/image-gallery";
@@ -30,6 +31,7 @@ export default async function ListingPage({
 
   const isOwner = session?.user?.id === listing.sellerId;
   const sold = listing.status === "SOLD";
+  const platform = resolvePlatform(listing.platform);
   const seller = await getSlackProfile(listing.seller.slackId);
 
   return (
@@ -56,7 +58,23 @@ export default async function ListingPage({
             <Badge tone={sold ? "danger" : "accent"}>
               {sold ? "Sold" : "Available"}
             </Badge>
-            {listing.platform ? <Badge>{listing.platform}</Badge> : null}
+            {platform ? (
+              platform.logoUrl ? (
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-white/90 px-2 py-1 shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={platform.logoUrl}
+                    alt=""
+                    className="h-4 w-auto max-w-[56px] object-contain"
+                  />
+                  <span className="font-mono text-xs font-medium uppercase tracking-wider text-bg">
+                    {platform.label}
+                  </span>
+                </span>
+              ) : (
+                <Badge>{platform.label}</Badge>
+              )
+            ) : null}
           </div>
 
           <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight">

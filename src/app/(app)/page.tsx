@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Search, PackageOpen } from "lucide-react";
 import { getActiveListings, getActivePlatforms } from "@/lib/listings";
+import { resolvePlatform } from "@/lib/platforms";
 import { ListingCard } from "@/components/listing-card";
 import { Input, Select } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -68,8 +69,10 @@ export default async function HomePage({
         >
           <option value="">Any platform</option>
           {platforms.map((p) => (
+            // Value stays the raw stored string (exact-match filter); only the
+            // label is normalized for a consistent dropdown.
             <option key={p} value={p}>
-              {p}
+              {resolvePlatform(p)?.label ?? p}
             </option>
           ))}
         </Select>

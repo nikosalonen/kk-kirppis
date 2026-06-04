@@ -72,7 +72,7 @@ export async function updateListing(
   formData: FormData,
 ): Promise<FormState> {
   const user = await requireUser();
-  await getOwnedListingOrThrow(id, user.id); // IDOR guard
+  const existing = await getOwnedListingOrThrow(id, user.id); // IDOR guard
 
   const parsed = parseListing(formData);
   if (!parsed.success) {
@@ -80,16 +80,33 @@ export async function updateListing(
   }
   const data = parsed.data;
 
-  // MVP: editing updates text fields only; images are set at creation time.
-  await prisma.listing.update({
-    where: { id },
-    data: {
-      title: data.title,
-      description: data.description,
-      priceCents: eurosToCents(data.priceEuros),
-      platform: data.platform ? data.platform : null,
-    },
-  });
+  // The form submits the full, ordered set of image paths (kept + newly
+  // uploaded). Existing images absent from that set were removed by the seller.
+  const newPaths = data.imagePaths;
+  const removed = existing.images
+    .map((img) => img.url)
+    .filter((url) => !newPaths.includes(url));
+
+  // Replace the image rows in one transaction so sortOrder matches the grid;
+  // kept images simply get recreated against the same storage object.
+  await prisma.$transaction([
+    prisma.listingImage.deleteMany({ where: { listingId: id } }),
+    prisma.listing.update({
+      where: { id },
+      data: {
+        title: data.title,
+        description: data.description,
+        priceCents: eurosToCents(data.priceEuros),
+        platform: data.platform ? data.platform : null,
+        images: {
+          create: newPaths.map((url, sortOrder) => ({ url, sortOrder })),
+        },
+      },
+    }),
+  ]);
+
+  // Best-effort storage cleanup for images the seller dropped (after commit).
+  if (removed.length > 0) await deleteImages(removed);
 
   revalidatePath("/");
   revalidatePath("/me");

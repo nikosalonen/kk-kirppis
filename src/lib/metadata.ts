@@ -1,10 +1,18 @@
 import "server-only";
 
+export type GamePlatform = {
+  name: string;
+  abbreviation: string | null;
+  slug: string | null;
+};
+
 export type GameResult = {
   title: string;
   year: string | null;
-  // Allowed-host image URLs, cover first, deduped. May be empty.
-  imageUrls: string[];
+  // Allowed-host cover URL, or null if the game has no cover.
+  coverUrl: string | null;
+  // Platforms the game released on, for the seller to pick from.
+  platforms: GamePlatform[];
 };
 
 // IGDB serves every cover/screenshot image from this host. The cover-import
@@ -81,12 +89,12 @@ export async function searchGames(query: string): Promise<GameResult[]> {
   }
   const token = await getIgdbToken();
 
-  // Apicalypse query: fuzzy search by name, pulling the cover + screenshot
-  // image ids and the release date. Escape quotes so the search term can't
-  // break out of the query string.
+  // Apicalypse query: fuzzy search by name, pulling the cover image id, the
+  // release date, and the platforms (nested expansion — no extra API call).
+  // Escape quotes so the search term can't break out of the query string.
   const body = [
     `search "${query.replace(/"/g, '\\"')}";`,
-    "fields name, first_release_date, cover.image_id, screenshots.image_id;",
+    "fields name, first_release_date, cover.image_id, platforms.name, platforms.abbreviation, platforms.slug;",
     "limit 8;",
   ].join(" ");
 
@@ -112,17 +120,20 @@ export async function searchGames(query: string): Promise<GameResult[]> {
     .map((r) => {
       const coverId = imageId(r.cover);
       const cover = coverId ? igdbImageUrl(coverId, "cover_big_2x") : "";
-      // A few preview shots per game alongside the cover.
-      const shots = Array.isArray(r.screenshots)
-        ? (r.screenshots as unknown[]).map((s) => {
-            const id = imageId(s);
-            return id ? igdbImageUrl(id, "720p") : "";
-          })
+      // Keep the cover only if it's an allowed-host URL (SSRF guard mirrors the
+      // import route); otherwise drop it.
+      const coverUrl = cover && isAllowedCoverHost(cover) ? cover : null;
+      // Platforms come back via nested expansion; keep the named ones.
+      const platforms: GamePlatform[] = Array.isArray(r.platforms)
+        ? (r.platforms as Record<string, unknown>[])
+            .map((p) => ({
+              name: typeof p.name === "string" ? p.name : "",
+              abbreviation:
+                typeof p.abbreviation === "string" ? p.abbreviation : null,
+              slug: typeof p.slug === "string" ? p.slug : null,
+            }))
+            .filter((p) => p.name.length > 0)
         : [];
-      // Cover first, then screenshots; dedupe and keep only allowed-host URLs.
-      const imageUrls = Array.from(new Set([cover, ...shots])).filter(
-        (u) => u.length > 0 && isAllowedCoverHost(u),
-      );
       // first_release_date is a Unix timestamp (seconds).
       const ts =
         typeof r.first_release_date === "number" ? r.first_release_date : null;
@@ -132,7 +143,8 @@ export async function searchGames(query: string): Promise<GameResult[]> {
       return {
         title: typeof r.name === "string" ? r.name : "",
         year,
-        imageUrls,
+        coverUrl,
+        platforms,
       };
     })
     .filter((g) => g.title.length > 0);

@@ -18,6 +18,7 @@ export default function SellPage() {
       <ListingForm
         action={createListing}
         allowImages
+        showGameFinder
         submitLabel="Publish listing"
       />
     </div>

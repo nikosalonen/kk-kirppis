@@ -30,8 +30,7 @@ export default async function EditListingPage({
           {listing.title}
         </h1>
         <p className="text-muted">
-          Photos are set when a listing is created and can&apos;t be changed
-          here.
+          Update the details, add or remove photos, and drag to reorder them.
         </p>
       </header>
       <ListingForm
@@ -42,6 +41,8 @@ export default async function EditListingPage({
           priceEuros: (listing.priceCents / 100).toString(),
           platform: listing.platform ?? "",
         }}
+        allowImages
+        initialImages={listing.images.map((img) => ({ url: img.url }))}
         submitLabel="Save changes"
       />
     </div>

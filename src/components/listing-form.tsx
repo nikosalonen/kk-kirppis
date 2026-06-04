@@ -2,11 +2,12 @@
 
 import { useActionState, useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { GripVertical, ImagePlus, Loader2, X } from "lucide-react";
 import type { FormState } from "@/app/(app)/listings/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import { MetadataFinder } from "@/components/metadata-finder";
+import type { GamePlatform } from "@/lib/metadata";
 import { MAX_IMAGES } from "@/lib/validation";
 import { publicImageUrl } from "@/lib/image-url";
 
@@ -21,6 +22,13 @@ type Defaults = {
 };
 
 type UploadTarget = { path: string; signedUrl: string };
+
+// One image in the photo grid, in display order. Either a cover already imported
+// to storage (metadata finder) or a local file awaiting upload. A single ordered
+// list lets the seller drag-reorder across both kinds; index 0 is the cover.
+type Slot =
+  | { kind: "imported"; id: string; path: string }
+  | { kind: "file"; id: string; file: File; previewUrl: string };
 
 async function uploadImages(files: File[]): Promise<string[]> {
   if (files.length === 0) return [];
@@ -49,20 +57,40 @@ export function ListingForm({
   action,
   defaults,
   allowImages = false,
+  showGameFinder = false,
+  initialImages,
   submitLabel,
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   defaults?: Defaults;
   allowImages?: boolean;
+  // Show the IGDB "Find game info" helper (creation only — re-picking replaces
+  // the cover and would drop existing images, so it's off when editing).
+  showGameFinder?: boolean;
+  // Existing stored image paths (in order) to seed the grid when editing.
+  initialImages?: { url: string }[];
   submitLabel: string;
 }) {
   const [state, formAction] = useActionState(action, undefined);
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(defaults?.title ?? "");
-  const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
-  // Covers already uploaded server-side (imported via the metadata finder).
-  const [importedPaths, setImportedPaths] = useState<string[]>([]);
+  // Ordered photo grid: imported cover(s) + local files, drag-reorderable.
+  // Seeded from the listing's existing images when editing.
+  const [slots, setSlots] = useState<Slot[]>(() =>
+    (initialImages ?? []).map((img) => ({
+      kind: "imported",
+      id: img.url,
+      path: img.url,
+    })),
+  );
+  // Index of the slot currently being dragged, for reorder + visual cue.
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  // Platform field is controlled so the metadata finder's chips can set it.
+  const [platform, setPlatform] = useState(defaults?.platform ?? "");
+  // Platforms of the most recently picked game — drives the chip selector.
+  const [gamePlatforms, setGamePlatforms] = useState<GamePlatform[]>([]);
+  // True once the seller chooses "Other", revealing the free-text input.
+  const [platformOther, setPlatformOther] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
   // Guards the upload window before the server action starts. `isPending` only
   // covers the action transition, leaving the upload window unguarded — a second
@@ -71,15 +99,14 @@ export function ListingForm({
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const totalImages = files.length + importedPaths.length;
+  const fileCount = slots.filter((s) => s.kind === "file").length;
 
   function addFiles(selected: FileList | null) {
     if (!selected) return;
     setClientError(null);
-    const next = [...files];
-    const nextPreviews = [...previews];
+    const next = [...slots];
     for (const file of Array.from(selected)) {
-      if (next.length + importedPaths.length >= MAX_IMAGES) {
+      if (next.length >= MAX_IMAGES) {
         setClientError(`You can add up to ${MAX_IMAGES} images.`);
         break;
       }
@@ -91,37 +118,64 @@ export function ListingForm({
         setClientError("Each image must be 5 MB or smaller.");
         continue;
       }
-      next.push(file);
-      nextPreviews.push(URL.createObjectURL(file));
+      next.push({
+        kind: "file",
+        id: crypto.randomUUID(),
+        file,
+        previewUrl: URL.createObjectURL(file),
+      });
     }
-    setFiles(next);
-    setPreviews(nextPreviews);
+    setSlots(next);
     if (inputRef.current) inputRef.current.value = "";
   }
 
-  function removeFile(index: number) {
-    URL.revokeObjectURL(previews[index]);
-    setFiles(files.filter((_, i) => i !== index));
-    setPreviews(previews.filter((_, i) => i !== index));
+  function removeAt(index: number) {
+    const slot = slots[index];
+    if (slot?.kind === "file") URL.revokeObjectURL(slot.previewUrl);
+    setSlots(slots.filter((_, i) => i !== index));
   }
 
-  function removeImported(index: number) {
-    setImportedPaths(importedPaths.filter((_, i) => i !== index));
+  // Reorder by moving the dragged slot to the drop target's position.
+  function moveSlot(from: number, to: number) {
+    if (from === to) return;
+    setSlots((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
   }
 
   function onPickMetadata({
     title: pickedTitle,
-    coverPaths,
+    coverPath,
+    platforms,
   }: {
     title: string;
-    coverPaths: string[];
+    coverPath: string | null;
+    platforms: GamePlatform[];
   }) {
     setTitle(pickedTitle.slice(0, 120));
-    // A pick represents one game, so it *replaces* any images imported for a
-    // previous pick rather than stacking on top (the title already replaces).
-    // User-uploaded `files` are untouched; cap against them since the old
-    // importedPaths are being discarded.
-    setImportedPaths(coverPaths.slice(0, Math.max(0, MAX_IMAGES - files.length)));
+    // A pick represents one game, so its cover *replaces* any previously
+    // imported cover and leads the grid. The seller's own files are untouched;
+    // cap against them since the old import is being discarded.
+    setSlots((prev) => {
+      const fileSlots = prev.filter((s) => s.kind === "file");
+      const cover: Slot[] =
+        coverPath && fileSlots.length < MAX_IMAGES
+          ? [{ kind: "imported", id: coverPath, path: coverPath }]
+          : [];
+      return [...cover, ...fileSlots];
+    });
+    // Offer the game's platforms as chips. Auto-select when there's only one;
+    // otherwise clear the selection so the seller picks the right one.
+    setGamePlatforms(platforms);
+    setPlatformOther(false);
+    setPlatform(
+      platforms.length === 1
+        ? (platforms[0].abbreviation ?? platforms[0].name)
+        : "",
+    );
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -131,9 +185,19 @@ export function ListingForm({
     setClientError(null);
     const formData = new FormData(e.currentTarget);
     try {
-      const uploaded = await uploadImages(files);
-      for (const path of [...importedPaths, ...uploaded]) {
-        formData.append("imagePaths", path);
+      // Upload the local files (in grid order), then emit every path in slot
+      // order so sortOrder — and the cover (index 0) — follows the arrangement.
+      const fileSlots = slots.filter(
+        (s): s is Extract<Slot, { kind: "file" }> => s.kind === "file",
+      );
+      const uploaded = await uploadImages(fileSlots.map((s) => s.file));
+      const uploadedById = new Map(
+        fileSlots.map((s, i) => [s.id, uploaded[i]]),
+      );
+      for (const slot of slots) {
+        const path =
+          slot.kind === "imported" ? slot.path : uploadedById.get(slot.id);
+        if (path) formData.append("imagePaths", path);
       }
     } catch (err) {
       setClientError(err instanceof Error ? err.message : "Upload failed.");
@@ -146,10 +210,10 @@ export function ListingForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      {allowImages ? (
+      {showGameFinder ? (
         <MetadataFinder
           defaultQuery={title}
-          remainingSlots={MAX_IMAGES - totalImages}
+          canAddCover={fileCount < MAX_IMAGES}
           onPick={onPickMetadata}
         />
       ) : null}
@@ -185,13 +249,69 @@ export function ListingForm({
           htmlFor="platform"
           hint="Optional — e.g. PS5, Switch, PC"
         >
-          <Input
-            id="platform"
-            name="platform"
-            maxLength={40}
-            defaultValue={defaults?.platform}
-            placeholder="Switch"
-          />
+          {/* The single submitted value, kept in sync with chips / free-text. */}
+          <input type="hidden" name="platform" value={platform} />
+          {gamePlatforms.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-2">
+                {gamePlatforms.map((p) => {
+                  const label = p.abbreviation ?? p.name;
+                  const active = !platformOther && platform === label;
+                  return (
+                    <button
+                      key={p.slug ?? label}
+                      type="button"
+                      onClick={() => {
+                        setPlatformOther(false);
+                        setPlatform(label);
+                      }}
+                      aria-pressed={active}
+                      className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                        active
+                          ? "border-accent bg-accent/10 text-accent"
+                          : "border-border bg-surface-2 text-muted hover:border-accent/60 hover:text-ink"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlatformOther(true);
+                    setPlatform("");
+                  }}
+                  aria-pressed={platformOther}
+                  className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                    platformOther
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-border bg-surface-2 text-muted hover:border-accent/60 hover:text-ink"
+                  }`}
+                >
+                  Other…
+                </button>
+              </div>
+              {platformOther ? (
+                <Input
+                  id="platform"
+                  maxLength={40}
+                  value={platform}
+                  onChange={(e) => setPlatform(e.target.value)}
+                  placeholder="e.g. Game & Watch"
+                  autoFocus
+                />
+              ) : null}
+            </div>
+          ) : (
+            <Input
+              id="platform"
+              maxLength={40}
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value)}
+              placeholder="Switch"
+            />
+          )}
         </Field>
       </div>
 
@@ -215,46 +335,58 @@ export function ListingForm({
           <span className="font-mono text-xs uppercase tracking-wider text-muted">
             Photos
           </span>
+          {slots.length > 1 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-accent/30 bg-accent/10 px-2 py-1 text-xs text-accent">
+              <GripVertical className="h-3.5 w-3.5 shrink-0" />
+              Drag the photos to reorder — the first one is the listing cover.
+            </span>
+          ) : null}
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-            {importedPaths.map((path, i) => (
-              <div
-                key={path}
-                className="group relative aspect-square overflow-hidden rounded-lg border border-accent/40 bg-surface-2"
-              >
-                <Image
-                  src={publicImageUrl(path)}
-                  alt=""
-                  fill
-                  sizes="160px"
-                  className="object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeImported(i)}
-                  className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-md bg-bg/80 text-ink opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
-                  aria-label="Remove image"
+            {slots.map((slot, i) => {
+              const src =
+                slot.kind === "imported"
+                  ? publicImageUrl(slot.path)
+                  : slot.previewUrl;
+              return (
+                <div
+                  key={slot.id}
+                  draggable
+                  onDragStart={() => setDragIndex(i)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragIndex !== null) moveSlot(dragIndex, i);
+                    setDragIndex(null);
+                  }}
+                  onDragEnd={() => setDragIndex(null)}
+                  className={`group relative aspect-square cursor-grab overflow-hidden rounded-lg border bg-surface-2 active:cursor-grabbing ${
+                    slot.kind === "imported" ? "border-accent/40" : "border-border"
+                  } ${dragIndex === i ? "opacity-50 ring-2 ring-accent" : ""}`}
                 >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-            {previews.map((src, i) => (
-              <div
-                key={src}
-                className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-surface-2"
-              >
-                <Image src={src} alt="" fill className="object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removeFile(i)}
-                  className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-md bg-bg/80 text-ink opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
-                  aria-label="Remove image"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-            {totalImages < MAX_IMAGES ? (
+                  <Image
+                    src={src}
+                    alt=""
+                    fill
+                    sizes="160px"
+                    className="pointer-events-none object-cover"
+                  />
+                  {i === 0 ? (
+                    <span className="absolute left-1 top-1 rounded bg-bg/80 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
+                      Cover
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => removeAt(i)}
+                    className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-md bg-bg/80 text-ink opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
+                    aria-label="Remove image"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
+            {slots.length < MAX_IMAGES ? (
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
