@@ -1,5 +1,7 @@
 import "server-only";
 
+import { TORI_IMAGE_HOST } from "@/lib/tori-import";
+
 export type GamePlatform = {
   name: string;
   abbreviation: string | null;
@@ -15,14 +17,20 @@ export type GameResult = {
   platforms: GamePlatform[];
 };
 
-// IGDB serves every cover/screenshot image from this host. The cover-import
-// route only fetches URLs on this host (SSRF guard) — never arbitrary input.
+// IGDB serves every cover/screenshot image from this host (used to build cover
+// URLs below).
 const IGDB_IMAGE_HOST = "images.igdb.com";
+
+// Image CDNs the cover-import route is allowed to fetch from (SSRF guard): IGDB
+// covers/screenshots and tori.fi listing photos (for the tori import). The tori
+// host is imported from lib/tori-import so the parse side and the fetch side
+// can't drift apart.
+const ALLOWED_IMAGE_HOSTS = new Set([IGDB_IMAGE_HOST, TORI_IMAGE_HOST]);
 
 export function isAllowedCoverHost(url: string): boolean {
   try {
     const u = new URL(url);
-    return u.protocol === "https:" && u.hostname === IGDB_IMAGE_HOST;
+    return u.protocol === "https:" && ALLOWED_IMAGE_HOSTS.has(u.hostname);
   } catch {
     return false;
   }

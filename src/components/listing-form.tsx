@@ -7,6 +7,7 @@ import type { FormState } from "@/app/(app)/listings/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import { MetadataFinder } from "@/components/metadata-finder";
+import { ToriImport, type ToriImportPayload } from "@/components/tori-import";
 import type { GamePlatform } from "@/lib/metadata";
 import { MAX_IMAGES } from "@/lib/validation";
 import { publicImageUrl } from "@/lib/image-url";
@@ -58,6 +59,7 @@ export function ListingForm({
   defaults,
   allowImages = false,
   showGameFinder = false,
+  showToriImport = false,
   initialImages,
   submitLabel,
 }: {
@@ -67,6 +69,8 @@ export function ListingForm({
   // Show the IGDB "Find game info" helper (creation only — re-picking replaces
   // the cover and would drop existing images, so it's off when editing).
   showGameFinder?: boolean;
+  // Show the "Import from Tori" paste-link helper (creation only).
+  showToriImport?: boolean;
   // Existing stored image paths (in order) to seed the grid when editing.
   initialImages?: { url: string }[];
   submitLabel: string;
@@ -74,6 +78,9 @@ export function ListingForm({
   const [state, formAction] = useActionState(action, undefined);
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(defaults?.title ?? "");
+  // Controlled so the metadata / Tori importers can prefill them.
+  const [description, setDescription] = useState(defaults?.description ?? "");
+  const [priceEuros, setPriceEuros] = useState(defaults?.priceEuros ?? "");
   // Ordered photo grid: imported cover(s) + local files, drag-reorderable.
   // Seeded from the listing's existing images when editing.
   const [slots, setSlots] = useState<Slot[]>(() =>
@@ -178,6 +185,27 @@ export function ListingForm({
     );
   }
 
+  function onToriImport({
+    title: t,
+    description: d,
+    priceEuros: p,
+    coverPath,
+  }: ToriImportPayload) {
+    if (t) setTitle(t.slice(0, 120));
+    if (d) setDescription(d.slice(0, 4000));
+    if (p) setPriceEuros(p);
+    // The imported cover leads the grid (replacing any prior import); the
+    // seller's own files are kept.
+    setSlots((prev) => {
+      const fileSlots = prev.filter((s) => s.kind === "file");
+      const cover: Slot[] =
+        coverPath && fileSlots.length < MAX_IMAGES
+          ? [{ kind: "imported", id: coverPath, path: coverPath }]
+          : [];
+      return [...cover, ...fileSlots];
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (submitting) return; // ignore re-entry while a submit is in flight
@@ -210,12 +238,22 @@ export function ListingForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      {showGameFinder ? (
-        <MetadataFinder
-          defaultQuery={title}
-          canAddCover={fileCount < MAX_IMAGES}
-          onPick={onPickMetadata}
-        />
+      {showGameFinder || showToriImport ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {showGameFinder ? (
+            <MetadataFinder
+              defaultQuery={title}
+              canAddCover={fileCount < MAX_IMAGES}
+              onPick={onPickMetadata}
+            />
+          ) : null}
+          {showToriImport ? (
+            <ToriImport
+              canAddCover={fileCount < MAX_IMAGES}
+              onImport={onToriImport}
+            />
+          ) : null}
+        </div>
       ) : null}
 
       <Field label="Title" htmlFor="title">
@@ -240,7 +278,8 @@ export function ListingForm({
             min="0"
             step="0.01"
             required
-            defaultValue={defaults?.priceEuros}
+            value={priceEuros}
+            onChange={(e) => setPriceEuros(e.target.value)}
             placeholder="25.00"
           />
         </Field>
@@ -325,7 +364,8 @@ export function ListingForm({
           name="description"
           required
           maxLength={4000}
-          defaultValue={defaults?.description}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           placeholder="Condition details, what's included, why you're selling…"
         />
       </Field>
