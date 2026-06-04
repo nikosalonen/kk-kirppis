@@ -7,7 +7,7 @@ import type { FormState } from "@/app/(app)/listings/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import { MetadataFinder } from "@/components/metadata-finder";
-import { ToriImport } from "@/components/tori-import";
+import { ToriImport, type ToriImportPayload } from "@/components/tori-import";
 import type { GamePlatform } from "@/lib/metadata";
 import { MAX_IMAGES } from "@/lib/validation";
 import { publicImageUrl } from "@/lib/image-url";
@@ -190,12 +190,7 @@ export function ListingForm({
     description: d,
     priceEuros: p,
     coverPath,
-  }: {
-    title: string;
-    description: string;
-    priceEuros: string;
-    coverPath: string | null;
-  }) {
+  }: ToriImportPayload) {
     if (t) setTitle(t.slice(0, 120));
     if (d) setDescription(d.slice(0, 4000));
     if (p) setPriceEuros(p);

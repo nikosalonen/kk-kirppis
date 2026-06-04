@@ -1,5 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { isToriItemUrl, parseToriListing } from "@/lib/tori-import";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import {
+  fetchToriListing,
+  isToriItemUrl,
+  parseToriListing,
+} from "@/lib/tori-import";
 
 function pageWith(productJson: object): string {
   return `<!doctype html><html><head>
@@ -86,5 +90,76 @@ describe("parseToriListing", () => {
     const html =
       '<script type="application/ld+json">{ not json }</script>';
     expect(parseToriListing(html)).toBeNull();
+  });
+});
+
+describe("fetchToriListing", () => {
+  const ITEM = "https://www.tori.fi/recommerce/forsale/item/41367037";
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("rejects an off-host redirect without fetching the off-host URL (SSRF)", async () => {
+    const fn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { location: "https://169.254.169.254/" },
+        }),
+      );
+    vi.stubGlobal("fetch", fn);
+    await expect(fetchToriListing(ITEM)).rejects.toThrow();
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(fn).toHaveBeenCalledWith(
+      ITEM,
+      expect.objectContaining({ redirect: "manual" }),
+    );
+  });
+
+  it("follows a same-host tori redirect and parses the final page", async () => {
+    const dest = "https://www.tori.fi/recommerce/forsale/item/999";
+    const fn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(null, { status: 301, headers: { location: dest } }),
+      )
+      .mockResolvedValueOnce(new Response(pageWith(PRODUCT), { status: 200 }));
+    vi.stubGlobal("fetch", fn);
+    const listing = await fetchToriListing(ITEM);
+    expect(listing.title).toBe(PRODUCT.name);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws on an upstream non-OK status", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(new Response("nope", { status: 503 })),
+    );
+    await expect(fetchToriListing(ITEM)).rejects.toThrow(
+      "tori fetch failed: 503",
+    );
+  });
+
+  it("throws when the page has no Product JSON-LD", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response("<html><body>nope</body></html>", { status: 200 }),
+        ),
+    );
+    await expect(fetchToriListing(ITEM)).rejects.toThrow(
+      "No listing data found on the page",
+    );
+  });
+
+  it("rejects a non-tori URL before any fetch", async () => {
+    const fn = vi.fn();
+    vi.stubGlobal("fetch", fn);
+    await expect(
+      fetchToriListing("https://evil.example.com/item/1"),
+    ).rejects.toThrow("Not a tori.fi item URL");
+    expect(fn).not.toHaveBeenCalled();
   });
 });

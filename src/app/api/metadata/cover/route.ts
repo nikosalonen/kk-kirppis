@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { isAllowedCoverHost } from "@/lib/metadata";
+import { fetchAllowedRedirects } from "@/lib/redirect-fetch";
 import {
   ALLOWED_IMAGE_TYPES,
   MAX_IMAGE_BYTES,
@@ -31,10 +32,15 @@ export async function POST(req: Request) {
 
   try {
     // Bound the upstream fetch so a slow/stalled CDN can't tie up the function;
-    // an abort throws a TimeoutError, caught below and surfaced as a 504.
-    const imgRes = await fetch(parsed.data.coverUrl, {
-      signal: AbortSignal.timeout(15_000),
-    });
+    // an abort throws a TimeoutError, caught below and surfaced as a 504. Follow
+    // redirects manually and re-validate every hop with isAllowedCoverHost: an
+    // open redirect on an allowed CDN must not let us fetch an internal/metadata
+    // host (SSRF). Same guard the tori import uses.
+    const imgRes = await fetchAllowedRedirects(
+      parsed.data.coverUrl,
+      isAllowedCoverHost,
+      { signal: AbortSignal.timeout(15_000) },
+    );
     if (!imgRes.ok) {
       throw new Error(`cover fetch failed: ${imgRes.status}`);
     }

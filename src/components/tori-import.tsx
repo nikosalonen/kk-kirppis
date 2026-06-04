@@ -6,18 +6,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ToriListing } from "@/lib/tori-import";
 
+// The prefill the importer hands to the form. Distinct from ToriListing
+// (priceEuros is a form-ready string here; coverPath is our stored path, not the
+// source URL). Shared with listing-form's onToriImport so the two can't drift.
+export type ToriImportPayload = {
+  title: string;
+  description: string;
+  priceEuros: string;
+  coverPath: string | null;
+};
+
 export function ToriImport({
   canAddCover,
   onImport,
 }: {
   // Whether there's room to import the cover alongside the seller's own photos.
   canAddCover: boolean;
-  onImport: (data: {
-    title: string;
-    description: string;
-    priceEuros: string;
-    coverPath: string | null;
-  }) => void;
+  onImport: (data: ToriImportPayload) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
@@ -30,16 +35,32 @@ export function ToriImport({
     if (!u || !agreed) return;
     setLoading(true);
     setError(null);
+
+    let payload: ToriImportPayload | null = null;
     try {
       const res = await fetch("/api/import/tori", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ url: u }),
       });
-      if (!res.ok) throw new Error("import failed");
+      if (!res.ok) {
+        // Surface the server's specific, user-actionable message (bad link,
+        // session expired, timeout, no data) instead of one generic string.
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        console.error("[tori-import] import failed:", res.status, data?.error);
+        setError(
+          data?.error ??
+            "Couldn't import that listing. Check the link, or fill the form in manually.",
+        );
+        return;
+      }
       const { listing } = (await res.json()) as { listing: ToriListing };
 
-      // Import the cover into our bucket (best-effort, like the metadata finder).
+      // Import the cover into our bucket (best-effort, like the metadata finder):
+      // a failure here only drops the cover, the rest of the prefill proceeds —
+      // but log it so a silently coverless import is still diagnosable.
       let coverPath: string | null = null;
       if (canAddCover && listing.coverUrl) {
         try {
@@ -48,28 +69,41 @@ export function ToriImport({
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ coverUrl: listing.coverUrl }),
           });
-          if (r.ok) coverPath = ((await r.json()) as { path?: string }).path ?? null;
-        } catch {
-          coverPath = null;
+          if (r.ok) {
+            coverPath = ((await r.json()) as { path?: string }).path ?? null;
+          } else {
+            console.error("[tori-import] cover import failed:", r.status);
+          }
+        } catch (e) {
+          console.error("[tori-import] cover import error:", e);
         }
       }
 
-      onImport({
-        title: listing.title ?? "",
-        description: listing.description ?? "",
-        priceEuros: listing.priceEuros != null ? String(listing.priceEuros) : "",
+      payload = {
+        title: listing.title,
+        description: listing.description,
+        priceEuros:
+          listing.priceEuros != null ? String(listing.priceEuros) : "",
         coverPath,
-      });
-      setOpen(false);
-      setUrl("");
-      setAgreed(false);
-    } catch {
+      };
+    } catch (e) {
+      console.error("[tori-import] failed:", e);
       setError(
         "Couldn't import that listing. Check the link, or fill the form in manually.",
       );
+      return;
     } finally {
       setLoading(false);
     }
+
+    // Hand off outside the try so an error thrown by the parent's onImport isn't
+    // misreported to the user as an import failure. (Unreachable when null — the
+    // failure paths above already returned — but narrows the type.)
+    if (!payload) return;
+    onImport(payload);
+    setOpen(false);
+    setUrl("");
+    setAgreed(false);
   }
 
   if (!open) {

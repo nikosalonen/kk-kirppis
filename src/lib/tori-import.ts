@@ -7,9 +7,12 @@
 // No secrets here (unlike metadata.ts), so this stays importable client-side for
 // the pure helpers; only fetchToriListing makes a network call (from the route).
 
-// tori serves listing photos from this CDN host; the cover-import route
-// (isAllowedCoverHost) must allow it too.
-const TORI_IMAGE_HOST = "img.tori.net";
+import { fetchAllowedRedirects } from "@/lib/redirect-fetch";
+
+// tori serves listing photos from this CDN host. The cover-import route's
+// allowlist (isAllowedCoverHost in lib/metadata.ts) imports this same constant,
+// so the two stay coupled by the compiler rather than by a comment.
+export const TORI_IMAGE_HOST = "img.tori.net";
 
 export type ToriListing = {
   title: string;
@@ -131,42 +134,25 @@ export async function fetchToriListing(url: string): Promise<ToriListing> {
     throw new Error("Not a tori.fi item URL");
   }
 
-  // Follow redirects MANUALLY and re-validate every hop with isToriItemUrl.
-  // Auto-following (`redirect: "follow"`) would let a tori 3xx — open redirect,
-  // internal host, cloud-metadata IP — escape the host allowlist (SSRF), since
-  // the guard above only covers the first URL.
-  let current = url;
-  for (let hop = 0; hop < 4; hop++) {
-    const res = await fetch(current, {
-      headers: {
-        // tori serves the listing HTML to normal browsers; identify as one.
-        "user-agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-        accept: "text/html",
-        "accept-language": "fi,en;q=0.8",
-      },
-      signal: AbortSignal.timeout(10_000),
-      redirect: "manual",
-    });
+  // Follow redirects through the shared SSRF-safe helper, re-validating every
+  // hop with isToriItemUrl so a tori 3xx can't escape the host allowlist.
+  const res = await fetchAllowedRedirects(url, isToriItemUrl, {
+    headers: {
+      // tori serves the listing HTML to normal browsers; identify as one.
+      "user-agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+      accept: "text/html",
+      "accept-language": "fi,en;q=0.8",
+    },
+    signal: AbortSignal.timeout(10_000),
+  });
 
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get("location");
-      const next = location ? new URL(location, current).toString() : null;
-      if (!next || !isToriItemUrl(next)) {
-        throw new Error("tori redirect left the allowed host");
-      }
-      current = next;
-      continue;
-    }
-
-    if (!res.ok) {
-      throw new Error(`tori fetch failed: ${res.status}`);
-    }
-    const listing = parseToriListing(await res.text());
-    if (!listing) {
-      throw new Error("No listing data found on the page");
-    }
-    return listing;
+  if (!res.ok) {
+    throw new Error(`tori fetch failed: ${res.status}`);
   }
-  throw new Error("Too many tori redirects");
+  const listing = parseToriListing(await res.text());
+  if (!listing) {
+    throw new Error("No listing data found on the page");
+  }
+  return listing;
 }
