@@ -288,7 +288,10 @@ function ImagePicker({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-surface shadow-2xl"
+        // transform-gpu puts the (opaque) modal panel on its own compositing
+        // layer, so the thumbnails' hover-transition repaints stay contained
+        // here and don't force the overlay's backdrop-blur to re-rasterize.
+        className="flex max-h-[85vh] w-full max-w-2xl transform-gpu flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-start justify-between gap-3 border-b border-border p-4">
