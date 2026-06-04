@@ -129,7 +129,7 @@ export function ImageGallery({
             ref={closeBtnRef}
             type="button"
             onClick={close}
-            className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-md bg-surface/80 text-ink transition-colors hover:text-accent"
+            className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-md bg-surface/80 text-ink transition-colors will-change-transform hover:text-accent"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -143,7 +143,7 @@ export function ImageGallery({
                   e.stopPropagation();
                   step(-1);
                 }}
-                className="absolute left-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-surface/80 text-ink transition-colors hover:text-accent"
+                className="absolute left-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-surface/80 text-ink transition-colors will-change-transform hover:text-accent"
                 aria-label="Previous image"
               >
                 <ChevronLeft className="h-6 w-6" />
@@ -154,7 +154,7 @@ export function ImageGallery({
                   e.stopPropagation();
                   step(1);
                 }}
-                className="absolute right-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-surface/80 text-ink transition-colors hover:text-accent"
+                className="absolute right-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-surface/80 text-ink transition-colors will-change-transform hover:text-accent"
                 aria-label="Next image"
               >
                 <ChevronRight className="h-6 w-6" />
