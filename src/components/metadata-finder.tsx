@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Images, Loader2, Search, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -269,6 +269,15 @@ function ImagePicker({
   const { result, selected } = picker;
   const atCap = selected.size >= remainingSlots;
   const count = selected.size;
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Move focus into the dialog on open and return it to the trigger on close.
+  // The picker mounts/unmounts with the modal, so a mount effect is enough.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeBtnRef.current?.focus();
+    return () => previouslyFocused?.focus?.();
+  }, []);
 
   return (
     <div
@@ -292,6 +301,7 @@ function ImagePicker({
             </p>
           </div>
           <button
+            ref={closeBtnRef}
             type="button"
             onClick={onClose}
             disabled={importing}

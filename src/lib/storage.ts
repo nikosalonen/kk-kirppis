@@ -75,7 +75,12 @@ export async function createImageUploadTargets(
 /** Best-effort removal of storage objects when a listing is deleted. */
 export async function deleteImages(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
-  await admin().storage.from(BUCKET).remove(paths);
+  // Best-effort: never throw (deletion must still succeed), but surface a
+  // failure so orphaned objects don't pile up silently.
+  const { error } = await admin().storage.from(BUCKET).remove(paths);
+  if (error) {
+    console.error("[storage] image cleanup failed:", error.message);
+  }
 }
 
 /**

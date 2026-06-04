@@ -30,7 +30,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const imgRes = await fetch(parsed.data.coverUrl);
+    // Bound the upstream fetch so a slow/stalled CDN can't tie up the function;
+    // an abort lands in the catch below and returns a 502.
+    const imgRes = await fetch(parsed.data.coverUrl, {
+      signal: AbortSignal.timeout(15_000),
+    });
     if (!imgRes.ok) {
       throw new Error(`cover fetch failed: ${imgRes.status}`);
     }
