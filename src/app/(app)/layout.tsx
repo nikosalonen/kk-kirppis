@@ -18,10 +18,13 @@ export default async function AppLayout({
       </main>
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            KK-Kirppis · a flea market for the Koodiklinikka community · trade
-            fairly, be kind.
-          </p>
+          <div className="flex flex-col gap-1">
+            <p>A flea market for the Koodiklinikka community.</p>
+            <p>
+              Made by{" "}
+              <span className="font-medium text-ink">@einomies</span>
+            </p>
+          </div>
           <a
             href="https://github.com/nikosalonen/kk-kirppis"
             target="_blank"
