@@ -117,12 +117,11 @@ export function ListingForm({
     coverPaths: string[];
   }) {
     setTitle(pickedTitle.slice(0, 120));
-    if (coverPaths.length > 0) {
-      setImportedPaths((prev) => [
-        ...prev,
-        ...coverPaths.slice(0, Math.max(0, MAX_IMAGES - totalImages)),
-      ]);
-    }
+    // A pick represents one game, so it *replaces* any images imported for a
+    // previous pick rather than stacking on top (the title already replaces).
+    // User-uploaded `files` are untouched; cap against them since the old
+    // importedPaths are being discarded.
+    setImportedPaths(coverPaths.slice(0, Math.max(0, MAX_IMAGES - files.length)));
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
