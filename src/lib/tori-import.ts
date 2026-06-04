@@ -130,23 +130,43 @@ export async function fetchToriListing(url: string): Promise<ToriListing> {
   if (!isToriItemUrl(url)) {
     throw new Error("Not a tori.fi item URL");
   }
-  const res = await fetch(url, {
-    headers: {
-      // tori serves the listing HTML to normal browsers; identify as one.
-      "user-agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-      accept: "text/html",
-      "accept-language": "fi,en;q=0.8",
-    },
-    signal: AbortSignal.timeout(10_000),
-    redirect: "follow",
-  });
-  if (!res.ok) {
-    throw new Error(`tori fetch failed: ${res.status}`);
+
+  // Follow redirects MANUALLY and re-validate every hop with isToriItemUrl.
+  // Auto-following (`redirect: "follow"`) would let a tori 3xx — open redirect,
+  // internal host, cloud-metadata IP — escape the host allowlist (SSRF), since
+  // the guard above only covers the first URL.
+  let current = url;
+  for (let hop = 0; hop < 4; hop++) {
+    const res = await fetch(current, {
+      headers: {
+        // tori serves the listing HTML to normal browsers; identify as one.
+        "user-agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        accept: "text/html",
+        "accept-language": "fi,en;q=0.8",
+      },
+      signal: AbortSignal.timeout(10_000),
+      redirect: "manual",
+    });
+
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location");
+      const next = location ? new URL(location, current).toString() : null;
+      if (!next || !isToriItemUrl(next)) {
+        throw new Error("tori redirect left the allowed host");
+      }
+      current = next;
+      continue;
+    }
+
+    if (!res.ok) {
+      throw new Error(`tori fetch failed: ${res.status}`);
+    }
+    const listing = parseToriListing(await res.text());
+    if (!listing) {
+      throw new Error("No listing data found on the page");
+    }
+    return listing;
   }
-  const listing = parseToriListing(await res.text());
-  if (!listing) {
-    throw new Error("No listing data found on the page");
-  }
-  return listing;
+  throw new Error("Too many tori redirects");
 }
