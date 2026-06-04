@@ -64,9 +64,10 @@ export function ListingForm({
   // Covers already uploaded server-side (imported via the metadata finder).
   const [importedPaths, setImportedPaths] = useState<string[]>([]);
   const [clientError, setClientError] = useState<string | null>(null);
-  // Guards the whole submit (image upload + server action). `isPending` only
+  // Guards the upload window before the server action starts. `isPending` only
   // covers the action transition, leaving the upload window unguarded — a second
-  // click there would re-upload and create a duplicate listing.
+  // click there would re-upload and create a duplicate listing. Once uploads
+  // finish, `isPending` takes over re-entry protection (see disabled= below).
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 

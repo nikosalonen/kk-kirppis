@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 
   try {
     // Bound the upstream fetch so a slow/stalled CDN can't tie up the function;
-    // an abort lands in the catch below and returns a 502.
+    // an abort throws a TimeoutError, caught below and surfaced as a 504.
     const imgRes = await fetch(parsed.data.coverUrl, {
       signal: AbortSignal.timeout(15_000),
     });
@@ -53,6 +53,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ path });
   } catch (err) {
     console.error("[metadata/cover] failed:", err);
+    // Distinguish the bounded-fetch timeout (a gateway timeout, 504) from a
+    // generic upstream failure (502) so logs/clients aren't misled.
+    if (err instanceof Error && err.name === "TimeoutError") {
+      return NextResponse.json(
+        { error: "Cover source timed out" },
+        { status: 504 },
+      );
+    }
     return NextResponse.json(
       { error: "Could not import cover" },
       { status: 502 },
