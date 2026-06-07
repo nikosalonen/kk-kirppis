@@ -366,7 +366,7 @@ export function ListingForm({
           maxLength={4000}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Condition details, what's included, why you're selling…"
+          placeholder="Condition details, what's included, your location, preferred payment method, whether you can send it by mail…"
         />
       </Field>
 
