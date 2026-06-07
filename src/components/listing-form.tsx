@@ -375,6 +375,11 @@ export function ListingForm({
           <span className="font-mono text-xs uppercase tracking-wider text-muted">
             Photos
           </span>
+          <span className="text-xs text-muted">
+            Even though cover art can be fetched from IGDB, your own photos of
+            the actual item are encouraged — they show real condition and build
+            trust with buyers.
+          </span>
           {slots.length > 1 ? (
             <span className="inline-flex items-center gap-1.5 rounded-md border border-accent/30 bg-accent/10 px-2 py-1 text-xs text-accent">
               <GripVertical className="h-3.5 w-3.5 shrink-0" />
