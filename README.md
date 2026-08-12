@@ -131,6 +131,20 @@ the `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` repo secrets.
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
+## No preview deployments
+
+`vercel.json` disables Vercel's automatic Git deployments for every branch
+except `main` (`git.deploymentEnabled`). All the project's environment
+variables are scoped to **Production only**, so a preview build cannot get
+`DIRECT_URL` and dies in `prisma generate`, and `src/auth.ts` fails closed
+without `KOODIKLINIKKA_SLACK_TEAM_ID`. Preview deploys were therefore failing
+on every pull request — most visibly on Dependabot's.
+
+To bring previews back, first give them their own environment: a separate
+Supabase database and Slack app, added to Vercel's **Preview** scope (a preview
+pointed at the production env would let preview traffic write real listings).
+Then drop the `git` block from `vercel.json`.
+
 ## Roadmap (post-MVP)
 
 - Image editing on existing listings; in-app messaging; categories beyond
