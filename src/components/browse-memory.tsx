@@ -3,15 +3,11 @@
 import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { isHomeUrl } from "@/lib/browse-url";
 
 // Remembers the last home-page URL (search + platform filter) for this tab, so
 // "Back to listings" on a detail page returns to the same results.
 const STORAGE_KEY = "kk-kirppis:last-browse-url";
-
-// Only home-page URLs are stored and followed.
-function isHomeUrl(value: string | null): value is string {
-  return value === "/" || Boolean(value?.startsWith("/?"));
-}
 
 export function RememberBrowseUrl({ href }: { href: string }) {
   useEffect(() => {
@@ -33,8 +29,9 @@ function readBrowseUrl(): string {
   }
 }
 
-// The stored value only changes on another page, so there's nothing to
-// subscribe to; the snapshot is read once per render.
+// useSyncExternalStore lets the server render and hydration use "/" and then
+// switches to the stored URL on the client, with no hydration mismatch. The
+// value only changes on another page, so subscribe does nothing.
 const subscribe = () => () => {};
 
 export function BackToListings() {

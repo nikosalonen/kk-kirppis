@@ -53,6 +53,8 @@ export default async function ListingPage({
             {platform ? (
               platform.logoUrl ? (
                 <span className="inline-flex w-fit items-center gap-1.5 rounded-md bg-white px-2 py-1 ring-1 ring-border">
+                  {/* Plain <img>: tiny external PNG, heavily CDN-cached; no need to
+                      route it through next/image or allow the host in next.config. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={platform.logoUrl}

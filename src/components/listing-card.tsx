@@ -23,7 +23,8 @@ export async function ListingCard({
   priority = false,
 }: {
   listing: CardListing;
-  // Set for above-the-fold cards (first row) so the LCP image preloads.
+  // Set for the first cards on the page (ListingGrid marks 4, one row on wide
+  // screens) so the LCP image preloads.
   priority?: boolean;
 }) {
   const cover = listing.images[0];

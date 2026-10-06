@@ -31,6 +31,8 @@ describe("formatListedAgo", () => {
   });
 
   it("switches to months after 30 days", () => {
+    expect(formatListedAgo(hoursAgo(24 * 29), now)).toBe("29 days ago");
+    expect(formatListedAgo(hoursAgo(24 * 30), now)).toBe("last month");
     expect(formatListedAgo(hoursAgo(24 * 45), now)).toBe("last month");
     expect(formatListedAgo(hoursAgo(24 * 100), now)).toBe("3 months ago");
   });

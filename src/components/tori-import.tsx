@@ -168,7 +168,7 @@ export function ToriImport({
         I swear this is my tori.fi listing
       </label>
       {error ? <p className="text-sm text-muted">{error}</p> : null}
-      <p className="text-xs text-muted/80">
+      <p className="text-xs text-muted">
         Pulls the title, description, price, and cover photo. Review and edit
         before publishing.
       </p>

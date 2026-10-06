@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { getActiveListings, getActivePlatforms } from "@/lib/listings";
-import { groupPlatforms } from "@/lib/platforms";
+import { groupPlatforms, platformFilter } from "@/lib/platforms";
 import { ListingGrid } from "@/components/listing-card";
 import { RememberBrowseUrl } from "@/components/browse-memory";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,8 @@ type SearchParams = Promise<{
   platform?: string;
 }>;
 
-// Home-page URL for a filter combination, dropping empty params.
+// Empty params are dropped, so "All platforms" with no search links to plain
+// "/" rather than "/?q=&platform=".
 function filterHref(q: string | undefined, platform: string | undefined) {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
@@ -31,16 +32,25 @@ export default async function HomePage({
 }) {
   const sp = await searchParams;
   const q = sp.q?.trim() || undefined;
-  // The URL carries the platform's display label ("Switch"); it expands to
-  // every stored spelling of it. An unknown label still matches exactly.
-  const platform = sp.platform?.trim() || undefined;
+  const platformParam = sp.platform?.trim() || undefined;
 
-  const platformGroups = groupPlatforms(await getActivePlatforms());
-  const selectedGroup = platformGroups.find((g) => g.label === platform);
-  const listings = await getActiveListings({
-    q,
-    platforms: platform ? (selectedGroup?.values ?? [platform]) : undefined,
-  });
+  // The URL carries the platform's display label ("Switch"), which expands to
+  // every stored spelling of it. Only a platform filter needs the groups
+  // before the listings query; without one, both queries run at once.
+  const platformGroupsPromise = getActivePlatforms().then(groupPlatforms);
+  const listingsPromise = platformParam
+    ? platformGroupsPromise.then((groups) =>
+        getActiveListings({
+          q,
+          platforms: platformFilter(groups, platformParam)?.values,
+        }),
+      )
+    : getActiveListings({ q });
+  const [platformGroups, listings] = await Promise.all([
+    platformGroupsPromise,
+    listingsPromise,
+  ]);
+  const platform = platformFilter(platformGroups, platformParam)?.label;
 
   const hasFilters = Boolean(q || platform);
   const count = listings.length;

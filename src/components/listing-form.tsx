@@ -307,6 +307,8 @@ export function ListingForm({
     startTransition(() => formAction(formData));
   }
 
+  const busy = isPending || submitting;
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {showGameFinder || showToriImport ? (
@@ -547,7 +549,7 @@ export function ListingForm({
             hidden
             onChange={(e) => addFiles(e.target.files)}
           />
-          <span className="text-xs text-muted/80">
+          <span className="text-xs text-muted">
             Up to {MAX_IMAGES} images, 5 MB each.
           </span>
         </div>
@@ -560,22 +562,35 @@ export function ListingForm({
       )}
 
       <div className="flex items-center gap-3">
-        <Button type="submit" size="lg" disabled={isPending || submitting}>
-          {isPending || submitting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : null}
+        <Button type="submit" size="lg" disabled={busy}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           {submitting && fileCount > 0
             ? "Uploading photos…"
             : isPending
               ? pendingLabel
               : submitLabel}
         </Button>
-        <Link
-          href={cancelHref}
-          className={buttonVariants({ variant: "ghost", size: "lg" })}
-        >
-          Cancel
-        </Link>
+        {/* Leaving mid-submit would not stop it: the uploads and the save
+            still finish, so the listing would go up after "Cancel". */}
+        {busy ? (
+          <span
+            aria-disabled="true"
+            className={buttonVariants({
+              variant: "ghost",
+              size: "lg",
+              className: "pointer-events-none opacity-50",
+            })}
+          >
+            Cancel
+          </span>
+        ) : (
+          <Link
+            href={cancelHref}
+            className={buttonVariants({ variant: "ghost", size: "lg" })}
+          >
+            Cancel
+          </Link>
+        )}
       </div>
     </form>
   );

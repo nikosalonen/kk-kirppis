@@ -2,8 +2,9 @@
 
 /* ---- KK-Kirppis "used-game shelf" theme -----------------------------------
    Follows the system light/dark setting. Neutral surfaces let the box art
-   carry the color; the yellow price-sticker is the only accent and is used for
-   prices alone. Interactive elements use ink (black in light, white in dark). */
+   carry the color; the yellow price sticker is the only accent (prices, plus
+   text selection). Interactive elements use ink (black in light, white in
+   dark). */
 @theme {
   --color-bg: #eceef1;
   --color-surface: #ffffff;
@@ -15,7 +16,7 @@
   --color-muted: #5f6672;
   --color-sticker: #ffc83d;
   --color-sticker-ink: #1a1c21;
-  --color-danger: #d22f45;
+  --color-danger: #b3203a;
   --color-on-danger: #ffffff;
 
   --font-display: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;

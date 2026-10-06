@@ -1,5 +1,4 @@
 import * as React from "react";
-import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const fieldStyles =
@@ -24,25 +23,6 @@ export function Textarea({
   );
 }
 
-// `className` sizes the wrapper, so width utilities work as on a plain select.
-export function Select({
-  className,
-  ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <div className={cn("relative", className)}>
-      <select
-        className={cn(fieldStyles, "h-11 appearance-none pr-9")}
-        {...props}
-      />
-      <ChevronDown
-        aria-hidden="true"
-        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-      />
-    </div>
-  );
-}
-
 export function Field({
   label,
   hint,
@@ -60,7 +40,7 @@ export function Field({
         {label}
       </span>
       {children}
-      {hint ? <span className="text-xs text-muted/80">{hint}</span> : null}
+      {hint ? <span className="text-xs text-muted">{hint}</span> : null}
     </label>
   );
 }

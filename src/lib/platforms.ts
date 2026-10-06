@@ -15,7 +15,8 @@
 // `fields name, abbreviation, slug, platform_logo.image_id; limit 500;`.
 
 export type PlatformEntry = {
-  // Short display label for the badge.
+  // Short display label. Also the filter chip text and the ?platform= URL
+  // value, so renaming a label changes those links.
   label: string;
   // IGDB image_id of the platform logo (PNG on the IGDB image CDN).
   logoImageId: string;
@@ -148,4 +149,19 @@ export function groupPlatforms(stored: string[]): PlatformGroup[] {
   return [...byLabel]
     .map(([label, values]) => ({ label, values }))
     .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+// The chip label and stored spellings for a ?platform= value. Links from
+// before the filter chips carry a stored spelling ("Nintendo Switch"), so the
+// value is resolved to its label first. A value with no active group still
+// matches itself exactly.
+export function platformFilter(
+  groups: PlatformGroup[],
+  platform: string | undefined,
+): PlatformGroup | undefined {
+  if (!platform) return undefined;
+  const label = resolvePlatform(platform)?.label ?? platform;
+  return (
+    groups.find((g) => g.label === label) ?? { label, values: [platform] }
+  );
 }

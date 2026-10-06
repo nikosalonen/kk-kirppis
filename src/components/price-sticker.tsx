@@ -2,8 +2,7 @@ import { formatPrice } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 // The yellow price sticker from a second-hand game case. Sold listings get a
-// red "Sold" sticker in its place. This is the one accent in the UI, so it is
-// used for prices only.
+// red "Sold" sticker in its place.
 export function PriceSticker({
   priceCents,
   sold,

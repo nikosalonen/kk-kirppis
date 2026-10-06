@@ -12,7 +12,7 @@ payments, no middlemen.
 - **Prisma 7** + **PostgreSQL** (Supabase) via the `pg` driver adapter
 - **Supabase Storage** for listing images (signed direct uploads)
 - **Tailwind v4** — "used-game shelf" theme that follows the system light/dark setting
-- **Vitest** for the security-critical ownership test
+- **Vitest** for unit tests, including the security-critical ownership check
 - Seller identity (name, **@handle**, avatar) fetched **live from Slack** and
   cached — no profile data is stored, only the Slack user id
 - Optional: **IGDB** game-metadata autofill, **Slack channel announcements**

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   groupPlatforms,
+  platformFilter,
   platformLogoUrl,
   resolvePlatform,
 } from "@/lib/platforms";
@@ -80,5 +81,38 @@ describe("groupPlatforms", () => {
     expect(groupPlatforms(["", "  ", "Wii"])).toEqual([
       { label: "Wii", values: ["Wii"] },
     ]);
+  });
+});
+
+describe("platformFilter", () => {
+  const groups = groupPlatforms(["Nintendo Switch", "PS5", "Switch", "switch"]);
+
+  it("expands a chip label to every stored spelling", () => {
+    expect(platformFilter(groups, "Switch")).toEqual({
+      label: "Switch",
+      values: ["Nintendo Switch", "Switch", "switch"],
+    });
+  });
+
+  it("resolves an old link's stored spelling to its chip", () => {
+    expect(platformFilter(groups, "Nintendo Switch")).toEqual({
+      label: "Switch",
+      values: ["Nintendo Switch", "Switch", "switch"],
+    });
+  });
+
+  it("matches a value with no active group exactly", () => {
+    expect(platformFilter(groups, "Magnavox Odyssey")).toEqual({
+      label: "Magnavox Odyssey",
+      values: ["Magnavox Odyssey"],
+    });
+    expect(platformFilter(groups, "PlayStation 4")).toEqual({
+      label: "PS4",
+      values: ["PlayStation 4"],
+    });
+  });
+
+  it("returns undefined when there is no platform filter", () => {
+    expect(platformFilter(groups, undefined)).toBeUndefined();
   });
 });
