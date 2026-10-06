@@ -133,3 +133,19 @@ export function resolvePlatform(
   if (!entry) return { label: value, logoUrl: null };
   return { label: entry.label, logoUrl: platformLogoUrl(entry.logoImageId) };
 }
+
+export type PlatformGroup = { label: string; values: string[] };
+
+// Group stored platform strings by their display label, so "Switch" and
+// "Nintendo Switch" become one filter chip that matches both. Sorted by label.
+export function groupPlatforms(stored: string[]): PlatformGroup[] {
+  const byLabel = new Map<string, string[]>();
+  for (const value of stored) {
+    const label = resolvePlatform(value)?.label;
+    if (!label) continue;
+    byLabel.set(label, [...(byLabel.get(label) ?? []), value]);
+  }
+  return [...byLabel]
+    .map(([label, values]) => ({ label, values }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}

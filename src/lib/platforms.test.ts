@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { resolvePlatform, platformLogoUrl } from "@/lib/platforms";
+import {
+  groupPlatforms,
+  platformLogoUrl,
+  resolvePlatform,
+} from "@/lib/platforms";
 
 describe("platformLogoUrl", () => {
   it("builds a t_logo_med PNG URL on the IGDB image CDN", () => {
@@ -54,5 +58,27 @@ describe("resolvePlatform", () => {
     expect(resolvePlatform(undefined)).toBeNull();
     expect(resolvePlatform("")).toBeNull();
     expect(resolvePlatform("   ")).toBeNull();
+  });
+});
+
+describe("groupPlatforms", () => {
+  it("groups stored spellings of one platform under its label", () => {
+    expect(groupPlatforms(["Nintendo Switch", "PS5", "Switch", "switch"])).toEqual([
+      { label: "PS5", values: ["PS5"] },
+      { label: "Switch", values: ["Nintendo Switch", "Switch", "switch"] },
+    ]);
+  });
+
+  it("keeps unknown platforms as their own group", () => {
+    expect(groupPlatforms(["Magnavox Odyssey", "PC"])).toEqual([
+      { label: "Magnavox Odyssey", values: ["Magnavox Odyssey"] },
+      { label: "PC", values: ["PC"] },
+    ]);
+  });
+
+  it("skips empty values", () => {
+    expect(groupPlatforms(["", "  ", "Wii"])).toEqual([
+      { label: "Wii", values: ["Wii"] },
+    ]);
   });
 });
