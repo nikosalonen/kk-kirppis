@@ -121,6 +121,13 @@ check:
 4. Deploy. The build runs `prisma generate` automatically; run
    `npm run db:deploy` against the production database for migrations.
 
+### Database keep-alive
+
+Supabase pauses free-tier projects after about 7 days without database
+activity. A daily Vercel cron (`crons` in `vercel.json`) calls `/api/health`,
+which runs `SELECT 1`. It returns `503` if the database is unreachable, so a
+paused or broken database shows up as a failed cron run in the Vercel logs.
+
 ## Deploy on tag
 
 A GitHub Actions workflow (`.github/workflows/release-deploy.yml`) deploys to
