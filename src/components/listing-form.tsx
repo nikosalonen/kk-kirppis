@@ -105,6 +105,7 @@ export function ListingForm({
   // finish, `isPending` takes over re-entry protection (see disabled= below).
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const fileCount = slots.filter((s) => s.kind === "file").length;
 
@@ -150,6 +151,69 @@ export function ListingForm({
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
       return next;
+    });
+  }
+
+  // Drag-to-reorder uses Pointer Events, which work for mouse, touch, and pen.
+  // (HTML5 drag-and-drop does not fire on mobile browsers.) The photo moves
+  // live as the pointer crosses other tiles. The handlers sit on the grid, not
+  // the tiles: reordering moves tile DOM nodes, and moving the node that holds
+  // pointer capture makes the browser release it mid-drag.
+  function startDrag(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    const tile = target.closest<HTMLElement>("[data-slot-index]");
+    if (!tile) return;
+    const fromHandle = target.closest("[data-drag-handle]") !== null;
+    // Touch and pen drag only from the grip handle, so a swipe over the grid
+    // still scrolls the page. A mouse can drag from anywhere except the
+    // remove button.
+    if (e.pointerType !== "mouse" && !fromHandle) return;
+    if (!fromHandle && target.closest("button")) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragIndex(Number(tile.dataset.slotIndex));
+  }
+
+  function dragTo(e: React.PointerEvent<HTMLDivElement>) {
+    if (dragIndex === null) return;
+    const tile = document
+      .elementFromPoint(e.clientX, e.clientY)
+      ?.closest<HTMLElement>("[data-slot-index]");
+    if (!tile) return;
+    const to = Number(tile.dataset.slotIndex);
+    if (to !== dragIndex) {
+      moveSlot(dragIndex, to);
+      setDragIndex(to);
+    }
+  }
+
+  function endDrag() {
+    setDragIndex(null);
+  }
+
+  // Keyboard reorder from the grip handle. Moving a DOM node can drop focus,
+  // so put focus back on the moved photo's handle after React re-renders.
+  function moveWithKeyboard(
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+    slotId: string,
+  ) {
+    const step =
+      e.key === "ArrowLeft" || e.key === "ArrowUp"
+        ? -1
+        : e.key === "ArrowRight" || e.key === "ArrowDown"
+          ? 1
+          : 0;
+    const to = index + step;
+    if (step === 0 || to < 0 || to >= slots.length) return;
+    e.preventDefault();
+    moveSlot(index, to);
+    requestAnimationFrame(() => {
+      gridRef.current
+        ?.querySelector<HTMLButtonElement>(
+          `[data-slot-id="${CSS.escape(slotId)}"] [data-drag-handle]`,
+        )
+        ?.focus();
     });
   }
 
@@ -383,10 +447,19 @@ export function ListingForm({
           {slots.length > 1 ? (
             <span className="inline-flex items-center gap-1.5 rounded-md border border-accent/30 bg-accent/10 px-2 py-1 text-xs text-accent">
               <GripVertical className="h-3.5 w-3.5 shrink-0" />
-              Drag the photos to reorder — the first one is the listing cover.
+              Drag the photos by their grip to reorder — the first one is the
+              listing cover.
             </span>
           ) : null}
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+          <div
+            ref={gridRef}
+            onPointerDown={startDrag}
+            onPointerMove={dragTo}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onLostPointerCapture={endDrag}
+            className="grid grid-cols-3 gap-3 sm:grid-cols-4"
+          >
             {slots.map((slot, i) => {
               const src =
                 slot.kind === "imported"
@@ -395,16 +468,9 @@ export function ListingForm({
               return (
                 <div
                   key={slot.id}
-                  draggable
-                  onDragStart={() => setDragIndex(i)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (dragIndex !== null) moveSlot(dragIndex, i);
-                    setDragIndex(null);
-                  }}
-                  onDragEnd={() => setDragIndex(null)}
-                  className={`group relative aspect-square cursor-grab overflow-hidden rounded-lg border bg-surface-2 active:cursor-grabbing ${
+                  data-slot-index={i}
+                  data-slot-id={slot.id}
+                  className={`group relative aspect-square cursor-grab select-none overflow-hidden rounded-lg border bg-surface-2 active:cursor-grabbing ${
                     slot.kind === "imported" ? "border-accent/40" : "border-border"
                   } ${dragIndex === i ? "opacity-50 ring-2 ring-accent" : ""}`}
                 >
@@ -419,6 +485,17 @@ export function ListingForm({
                     <span className="absolute left-1 top-1 rounded bg-bg/80 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
                       Cover
                     </span>
+                  ) : null}
+                  {slots.length > 1 ? (
+                    <button
+                      type="button"
+                      data-drag-handle
+                      onKeyDown={(e) => moveWithKeyboard(e, i, slot.id)}
+                      className="absolute bottom-1 left-1 grid h-7 w-7 touch-none cursor-grab place-items-center rounded-md bg-bg/80 text-ink active:cursor-grabbing pointer-coarse:h-9 pointer-coarse:w-9"
+                      aria-label={`Move photo ${i + 1} of ${slots.length}. Use the arrow keys to reorder.`}
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </button>
                   ) : null}
                   <button
                     type="button"
