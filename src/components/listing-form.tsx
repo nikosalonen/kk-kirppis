@@ -2,9 +2,10 @@
 
 import { useActionState, useRef, useState, useTransition } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { GripVertical, ImagePlus, Loader2, X } from "lucide-react";
 import type { FormState } from "@/app/(app)/listings/actions";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import { MetadataFinder } from "@/components/metadata-finder";
 import { ToriImport, type ToriImportPayload } from "@/components/tori-import";
@@ -62,6 +63,8 @@ export function ListingForm({
   showToriImport = false,
   initialImages,
   submitLabel,
+  pendingLabel,
+  cancelHref,
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   defaults?: Defaults;
@@ -74,6 +77,10 @@ export function ListingForm({
   // Existing stored image paths (in order) to seed the grid when editing.
   initialImages?: { url: string }[];
   submitLabel: string;
+  // Button text while the server action runs, e.g. "Publishing…".
+  pendingLabel: string;
+  // Where Cancel goes: the home page when creating, the listing when editing.
+  cancelHref: string;
 }) {
   const [state, formAction] = useActionState(action, undefined);
   const [isPending, startTransition] = useTransition();
@@ -303,20 +310,26 @@ export function ListingForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {showGameFinder || showToriImport ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {showGameFinder ? (
-            <MetadataFinder
-              defaultQuery={title}
-              canAddCover={fileCount < MAX_IMAGES}
-              onPick={onPickMetadata}
-            />
-          ) : null}
-          {showToriImport ? (
-            <ToriImport
-              canAddCover={fileCount < MAX_IMAGES}
-              onImport={onToriImport}
-            />
-          ) : null}
+        <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-border bg-surface p-4">
+          <p className="text-sm text-muted">
+            Save some typing: look the game up, or copy over a listing you
+            already have on Tori. You can edit everything before publishing.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {showGameFinder ? (
+              <MetadataFinder
+                defaultQuery={title}
+                canAddCover={fileCount < MAX_IMAGES}
+                onPick={onPickMetadata}
+              />
+            ) : null}
+            {showToriImport ? (
+              <ToriImport
+                canAddCover={fileCount < MAX_IMAGES}
+                onImport={onToriImport}
+              />
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -328,29 +341,38 @@ export function ListingForm({
           maxLength={120}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. The Legend of Zelda: Tears of the Kingdom"
+          placeholder="The Legend of Zelda: Tears of the Kingdom"
         />
       </Field>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Price (€)" htmlFor="priceEuros">
-          <Input
-            id="priceEuros"
-            name="priceEuros"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            required
-            value={priceEuros}
-            onChange={(e) => setPriceEuros(e.target.value)}
-            placeholder="25.00"
-          />
+        <Field label="Price" htmlFor="priceEuros">
+          <div className="relative">
+            <Input
+              id="priceEuros"
+              name="priceEuros"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              required
+              value={priceEuros}
+              onChange={(e) => setPriceEuros(e.target.value)}
+              placeholder="25"
+              className="pr-9"
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted"
+            >
+              €
+            </span>
+          </div>
         </Field>
         <Field
-          label="Platform"
+          label="Platform (optional)"
           htmlFor="platform"
-          hint="Optional — e.g. PS5, Switch, PC"
+          hint="For example PS5, Switch or PC"
         >
           {/* The single submitted value, kept in sync with chips / free-text. */}
           <input type="hidden" name="platform" value={platform} />
@@ -371,8 +393,8 @@ export function ListingForm({
                       aria-pressed={active}
                       className={`rounded-full border px-3 py-1 text-sm transition-colors ${
                         active
-                          ? "border-accent bg-accent/10 text-accent"
-                          : "border-border bg-surface-2 text-muted hover:border-accent/60 hover:text-ink"
+                          ? "border-ink bg-ink text-on-ink"
+                          : "border-border bg-surface text-muted hover:border-ink/40 hover:text-ink"
                       }`}
                     >
                       {label}
@@ -388,8 +410,8 @@ export function ListingForm({
                   aria-pressed={platformOther}
                   className={`rounded-full border px-3 py-1 text-sm transition-colors ${
                     platformOther
-                      ? "border-accent bg-accent/10 text-accent"
-                      : "border-border bg-surface-2 text-muted hover:border-accent/60 hover:text-ink"
+                      ? "border-ink bg-ink text-on-ink"
+                      : "border-border bg-surface text-muted hover:border-ink/40 hover:text-ink"
                   }`}
                 >
                   Other…
@@ -430,25 +452,23 @@ export function ListingForm({
           maxLength={4000}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Condition details, what's included, your location, preferred payment method, whether you can send it by mail…"
+          placeholder="Condition, what's included, where you are, and whether you can post it."
         />
       </Field>
 
       {allowImages ? (
         <div className="flex flex-col gap-2">
-          <span className="font-mono text-xs uppercase tracking-wider text-muted">
+          <span className="text-sm font-medium text-ink">
             Photos
           </span>
           <span className="text-xs text-muted">
-            Even though cover art can be fetched from IGDB, your own photos of
-            the actual item are encouraged — they show real condition and build
-            trust with buyers.
+            Photos of your own copy show buyers its real condition.
           </span>
           {slots.length > 1 ? (
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-accent/30 bg-accent/10 px-2 py-1 text-xs text-accent">
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1 text-xs text-muted">
               <GripVertical className="h-3.5 w-3.5 shrink-0" />
-              Drag the photos by their grip to reorder — the first one is the
-              listing cover.
+              Drag a photo by its handle to reorder. The first photo is the
+              cover.
             </span>
           ) : null}
           <div
@@ -471,8 +491,8 @@ export function ListingForm({
                   data-slot-index={i}
                   data-slot-id={slot.id}
                   className={`group relative aspect-square cursor-grab select-none overflow-hidden rounded-lg border bg-surface-2 active:cursor-grabbing ${
-                    slot.kind === "imported" ? "border-accent/40" : "border-border"
-                  } ${dragIndex === i ? "opacity-50 ring-2 ring-accent" : ""}`}
+                    slot.kind === "imported" ? "border-ink/30" : "border-border"
+                  } ${dragIndex === i ? "opacity-50 ring-2 ring-ink" : ""}`}
                 >
                   <Image
                     src={src}
@@ -482,7 +502,7 @@ export function ListingForm({
                     className="pointer-events-none object-cover"
                   />
                   {i === 0 ? (
-                    <span className="absolute left-1 top-1 rounded bg-bg/80 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
+                    <span className="absolute left-1 top-1 rounded bg-bg/85 px-1.5 py-0.5 text-[11px] font-medium text-ink">
                       Cover
                     </span>
                   ) : null}
@@ -512,7 +532,8 @@ export function ListingForm({
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="grid aspect-square place-items-center rounded-lg border border-dashed border-border bg-surface text-muted transition-colors hover:border-accent hover:text-accent"
+                aria-label="Add photos"
+                className="grid aspect-square place-items-center rounded-lg border border-dashed border-border bg-surface text-muted transition-colors hover:border-ink/40 hover:text-ink"
               >
                 <ImagePlus className="h-6 w-6" />
               </button>
@@ -543,8 +564,18 @@ export function ListingForm({
           {isPending || submitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : null}
-          {submitLabel}
+          {submitting && fileCount > 0
+            ? "Uploading photos…"
+            : isPending
+              ? pendingLabel
+              : submitLabel}
         </Button>
+        <Link
+          href={cancelHref}
+          className={buttonVariants({ variant: "ghost", size: "lg" })}
+        >
+          Cancel
+        </Link>
       </div>
     </form>
   );

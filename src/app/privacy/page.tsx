@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — KK-Kirppis",
+  title: "Privacy policy",
   description:
     "What KK-Kirppis stores, why, and who it is shared with. Built to collect as little personal data as possible.",
 };
@@ -15,13 +16,14 @@ export default function PrivacyPage() {
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:py-14">
         <Link
           href="/"
-          className="inline-flex w-fit items-center gap-1 text-sm text-muted transition-colors hover:text-accent"
+          className="inline-flex w-fit items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
         >
-          ← Back to KK-Kirppis
+          <ArrowLeft className="h-4 w-4" />
+          Back to KK-Kirppis
         </Link>
 
         <h1 className="mt-6 font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-          Privacy Policy
+          Privacy policy
         </h1>
         <p className="mt-2 text-sm text-muted">
           Last updated: {LAST_UPDATED}
@@ -176,7 +178,7 @@ export default function PrivacyPage() {
               href="https://github.com/nikosalonen/kk-kirppis"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent underline-offset-4 hover:underline"
+              className="underline underline-offset-4 hover:text-muted"
             >
               github.com/nikosalonen/kk-kirppis
             </a>
@@ -207,7 +209,7 @@ function Section({
 
 function List({ children }: { children: React.ReactNode }) {
   return (
-    <ul className="flex list-disc flex-col gap-2 pl-5 text-ink/90 marker:text-accent">
+    <ul className="flex list-disc flex-col gap-2 pl-5 text-ink/90 marker:text-muted">
       {children}
     </ul>
   );

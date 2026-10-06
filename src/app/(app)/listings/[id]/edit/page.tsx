@@ -23,9 +23,7 @@ export default async function EditListingPage({
   return (
     <div className="mx-auto max-w-2xl">
       <header className="mb-7 flex flex-col gap-2">
-        <span className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
-          Editing
-        </span>
+        <span className="text-sm text-muted">Editing</span>
         <h1 className="font-display text-3xl font-extrabold tracking-tight">
           {listing.title}
         </h1>
@@ -44,6 +42,8 @@ export default async function EditListingPage({
         allowImages
         initialImages={listing.images.map((img) => ({ url: img.url }))}
         submitLabel="Save changes"
+        pendingLabel="Saving…"
+        cancelHref={`/listings/${listing.id}`}
       />
     </div>
   );
