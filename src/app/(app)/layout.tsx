@@ -28,7 +28,7 @@ export default async function AppLayout({
             <p>
               <Link
                 href="/privacy"
-                className="text-muted underline-offset-4 transition-colors hover:text-accent hover:underline"
+                className="text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
               >
                 Privacy policy
               </Link>
@@ -40,7 +40,7 @@ export default async function AppLayout({
               target="_blank"
               rel="noopener noreferrer"
               aria-label="KK-Kirppis on GitHub"
-              className="inline-flex w-fit items-center gap-2 text-muted transition-colors hover:text-accent"
+              className="inline-flex w-fit items-center gap-2 text-muted transition-colors hover:text-ink"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -57,7 +57,7 @@ export default async function AppLayout({
               target="_blank"
               rel="noopener noreferrer"
               aria-label="@dmni on Threads"
-              className="inline-flex w-fit items-center gap-2 text-muted transition-colors hover:text-accent"
+              className="inline-flex w-fit items-center gap-2 text-muted transition-colors hover:text-ink"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -74,7 +74,7 @@ export default async function AppLayout({
               target="_blank"
               rel="noopener noreferrer"
               aria-label="niko.torttu.fi on Bluesky"
-              className="inline-flex w-fit items-center gap-2 text-muted transition-colors hover:text-accent"
+              className="inline-flex w-fit items-center gap-2 text-muted transition-colors hover:text-ink"
             >
               <svg
                 viewBox="0 0 24 24"

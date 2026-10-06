@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, MessageCircle, Pencil } from "lucide-react";
+import { MessageCircle, Pencil } from "lucide-react";
 import { auth } from "@/auth";
 import { getListing } from "@/lib/listings";
 import { getSlackProfile } from "@/lib/slack-profile";
-import { formatPrice, sellerLabel, slackDmUrl } from "@/lib/format";
+import { formatListedAgo, sellerLabel, slackDmUrl } from "@/lib/format";
 import { publicImageUrl } from "@/lib/image-url";
 import { resolvePlatform } from "@/lib/platforms";
-import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { ImageGallery } from "@/components/image-gallery";
+import { PriceSticker } from "@/components/price-sticker";
+import { SubmitButton } from "@/components/submit-button";
+import { BackToListings } from "@/components/browse-memory";
 import { deleteListing, setListingStatus } from "@/app/(app)/listings/actions";
 import { DeleteListingButton } from "@/components/delete-listing-button";
 
@@ -33,122 +35,144 @@ export default async function ListingPage({
   const sold = listing.status === "SOLD";
   const platform = resolvePlatform(listing.platform);
   const seller = await getSlackProfile(listing.seller.slackId);
+  const label = sellerLabel(seller);
 
   return (
     <div className="flex flex-col gap-6">
-      <Link
-        href="/"
-        className="inline-flex w-fit items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-muted hover:text-accent"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to listings
-      </Link>
+      <BackToListings />
 
       <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
-        {/* Gallery */}
         <ImageGallery
           images={listing.images.map((img) => publicImageUrl(img.url))}
           title={listing.title}
           sold={sold}
         />
 
-        {/* Details */}
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={sold ? "danger" : "accent"}>
-              {sold ? "Sold" : "Available"}
-            </Badge>
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3">
             {platform ? (
               platform.logoUrl ? (
-                <span className="inline-flex items-center gap-1.5 rounded-md bg-white/90 px-2 py-1 shadow-sm">
+                <span className="inline-flex w-fit items-center gap-1.5 rounded-md bg-white px-2 py-1 ring-1 ring-border">
+                  {/* Plain <img>: tiny external PNG, heavily CDN-cached; no need to
+                      route it through next/image or allow the host in next.config. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={platform.logoUrl}
                     alt=""
                     className="h-4 w-auto max-w-[56px] object-contain"
                   />
-                  <span className="font-mono text-xs font-medium uppercase tracking-wider text-bg">
+                  <span className="text-xs font-medium text-zinc-900">
                     {platform.label}
                   </span>
                 </span>
               ) : (
-                <Badge>{platform.label}</Badge>
+                <span className="text-sm text-muted">{platform.label}</span>
               )
             ) : null}
+
+            <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight">
+              {listing.title}
+            </h1>
+
+            <PriceSticker
+              priceCents={listing.priceCents}
+              sold={sold}
+              size="lg"
+              className="mt-1 w-fit"
+            />
           </div>
 
-          <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight">
-            {listing.title}
-          </h1>
+          {isOwner ? (
+            <section className="flex flex-col gap-3 rounded-[var(--radius)] border border-border bg-surface p-4">
+              <p className="text-sm text-muted">
+                {sold
+                  ? "This is your listing. It's marked as sold, so it's hidden from browsing."
+                  : "This is your listing. Buyers can see it and message you on Slack."}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <form
+                  action={setListingStatus.bind(
+                    null,
+                    listing.id,
+                    sold ? "ACTIVE" : "SOLD",
+                  )}
+                >
+                  <SubmitButton variant={sold ? "outline" : "primary"}>
+                    {sold ? "Mark as available" : "Mark as sold"}
+                  </SubmitButton>
+                </form>
+                <Link
+                  href={`/listings/${listing.id}/edit`}
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Link>
+                <DeleteListingButton
+                  action={deleteListing.bind(null, listing.id)}
+                />
+              </div>
+            </section>
+          ) : sold ? (
+            <p className="text-muted">
+              This game has been sold.{" "}
+              <Link
+                href={`/sellers/${listing.sellerId}`}
+                className="text-ink underline underline-offset-4"
+              >
+                See what else {label} is selling
+              </Link>
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <a
+                href={slackDmUrl(TEAM_ID, listing.seller.slackId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonVariants({
+                  variant: "primary",
+                  size: "lg",
+                  className: "sm:w-fit",
+                })}
+              >
+                <MessageCircle className="h-5 w-5" />
+                Message {label} on Slack
+              </a>
+              <p className="text-sm text-muted">
+                Opens a direct message in the Koodiklinikka Slack.
+              </p>
+            </div>
+          )}
 
-          <div className="font-mono text-4xl font-bold text-accent">
-            {formatPrice(listing.priceCents)}
-          </div>
-
-          <p className="whitespace-pre-wrap leading-relaxed text-ink/90">
+          <p className="max-w-prose whitespace-pre-wrap leading-relaxed text-ink/90">
             {listing.description}
           </p>
 
-          <Link
-            href={`/sellers/${listing.sellerId}`}
-            className="group mt-2 flex items-center gap-3 border-t border-border pt-5"
-          >
+          <div className="flex items-center gap-3 border-t border-border pt-5">
             {seller.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={seller.image}
                 alt=""
-                className="h-10 w-10 rounded-full border border-border object-cover"
+                className="h-10 w-10 rounded-full object-cover"
               />
             ) : (
-              <span className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface-2 font-mono text-xs text-muted">
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-surface-2 text-xs font-medium text-muted">
                 {seller.name.slice(0, 2).toUpperCase()}
               </span>
             )}
             <div className="text-sm">
-              <div className="font-medium group-hover:text-accent">
-                {sellerLabel(seller)}
-              </div>
-              <div className="text-muted">View all listings →</div>
-            </div>
-          </Link>
-
-          {/* Actions */}
-          {isOwner ? (
-            <div className="flex flex-wrap gap-2">
               <Link
-                href={`/listings/${listing.id}/edit`}
-                className={buttonVariants({ variant: "outline" })}
+                href={`/sellers/${listing.sellerId}`}
+                className="font-medium underline-offset-4 hover:underline"
               >
-                <Pencil className="h-4 w-4" />
-                Edit
+                {label}
               </Link>
-              <form
-                action={setListingStatus.bind(
-                  null,
-                  listing.id,
-                  sold ? "ACTIVE" : "SOLD",
-                )}
-              >
-                <Button variant="outline" type="submit">
-                  {sold ? "Mark as available" : "Mark as sold"}
-                </Button>
-              </form>
-              <DeleteListingButton
-                action={deleteListing.bind(null, listing.id)}
-              />
+              <div className="text-muted">
+                Listed {formatListedAgo(listing.createdAt)}
+              </div>
             </div>
-          ) : (
-            <a
-              href={slackDmUrl(TEAM_ID, listing.seller.slackId)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonVariants({ variant: "primary", size: "lg" })}
-            >
-              <MessageCircle className="h-5 w-5" />
-              Contact {sellerLabel(seller)} on Slack
-            </a>
-          )}
+          </div>
         </div>
       </div>
     </div>

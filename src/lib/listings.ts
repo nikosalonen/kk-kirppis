@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 
 export type ListingFilters = {
   q?: string;
-  platform?: string;
+  // Stored platform strings to match, e.g. every spelling of "Switch".
+  platforms?: string[];
 };
 
 const withImagesAndSeller = {
@@ -18,7 +19,9 @@ export async function getActiveListings(filters: ListingFilters = {}) {
       ...(filters.q
         ? { title: { contains: filters.q, mode: "insensitive" as const } }
         : {}),
-      ...(filters.platform ? { platform: filters.platform } : {}),
+      ...(filters.platforms?.length
+        ? { platform: { in: filters.platforms } }
+        : {}),
     },
     include: withImagesAndSeller,
     orderBy: { createdAt: "desc" },
@@ -59,7 +62,7 @@ export async function getSellerProfile(sellerId: string) {
   return { seller, listings };
 }
 
-/** Distinct platforms among active listings, for the filter dropdown. */
+/** Distinct stored platform strings among active listings, for the filter chips. */
 export async function getActivePlatforms(): Promise<string[]> {
   const rows = await prisma.listing.findMany({
     where: { status: "ACTIVE", platform: { not: null } },

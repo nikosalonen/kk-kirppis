@@ -2,12 +2,15 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // Mock the Prisma client so the guard's authorization logic can be tested
 // without a database. This is the IDOR choke point every mutation calls.
-const { findUnique } = vi.hoisted(() => ({ findUnique: vi.fn() }));
+const { findUnique, findMany } = vi.hoisted(() => ({
+  findUnique: vi.fn(),
+  findMany: vi.fn(),
+}));
 vi.mock("@/lib/prisma", () => ({
-  prisma: { listing: { findUnique } },
+  prisma: { listing: { findUnique, findMany } },
 }));
 
-import { getOwnedListingOrThrow } from "@/lib/listings";
+import { getActiveListings, getOwnedListingOrThrow } from "@/lib/listings";
 
 describe("getOwnedListingOrThrow — ownership / IDOR guard", () => {
   beforeEach(() => findUnique.mockReset());
@@ -36,5 +39,38 @@ describe("getOwnedListingOrThrow — ownership / IDOR guard", () => {
     await expect(getOwnedListingOrThrow("listing-1", "user-1")).resolves.toBe(
       listing,
     );
+  });
+});
+
+describe("getActiveListings filters", () => {
+  beforeEach(() => findMany.mockReset().mockResolvedValue([]));
+  const whereOf = () => findMany.mock.calls[0][0].where;
+
+  it("shows only active listings when there are no filters", async () => {
+    await getActiveListings();
+    expect(whereOf()).toEqual({ status: "ACTIVE" });
+  });
+
+  it("matches any of the given platform spellings", async () => {
+    await getActiveListings({ platforms: ["Nintendo Switch", "Switch"] });
+    expect(whereOf()).toEqual({
+      status: "ACTIVE",
+      platform: { in: ["Nintendo Switch", "Switch"] },
+    });
+  });
+
+  // `in: []` would match nothing and empty the home page.
+  it("ignores an empty platform list", async () => {
+    await getActiveListings({ platforms: [] });
+    expect(whereOf()).toEqual({ status: "ACTIVE" });
+  });
+
+  it("combines the title search with the platform filter", async () => {
+    await getActiveListings({ q: "zelda", platforms: ["Switch"] });
+    expect(whereOf()).toEqual({
+      status: "ACTIVE",
+      title: { contains: "zelda", mode: "insensitive" },
+      platform: { in: ["Switch"] },
+    });
   });
 });

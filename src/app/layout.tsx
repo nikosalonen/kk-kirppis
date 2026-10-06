@@ -1,26 +1,18 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { Schibsted_Grotesk } from "next/font/google";
 import { Analytics } from "@/components/analytics";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const schibsted = Schibsted_Grotesk({
+  variable: "--font-schibsted",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
 });
 
 export const metadata: Metadata = {
-  title: "KK-Kirppis — Koodiklinikka game flea market",
+  title: {
+    default: "KK-Kirppis: used games from Koodiklinikka members",
+    template: "%s | KK-Kirppis",
+  },
   description:
     "Buy and sell used video games within the Koodiklinikka community.",
 };
@@ -33,7 +25,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
+      className={`${schibsted.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         {children}

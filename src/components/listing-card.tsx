@@ -2,25 +2,29 @@ import Image from "next/image";
 import Link from "next/link";
 import { ImageOff } from "lucide-react";
 import type { Listing, ListingImage, User } from "@prisma/client";
-import { formatPrice, sellerLabel } from "@/lib/format";
+import { formatListedAgo, sellerLabel } from "@/lib/format";
 import { publicImageUrl } from "@/lib/image-url";
 import { resolvePlatform } from "@/lib/platforms";
 import { getSlackProfile } from "@/lib/slack-profile";
+import { PriceSticker } from "@/components/price-sticker";
 
 type CardListing = Pick<
   Listing,
-  "id" | "title" | "priceCents" | "platform" | "status"
+  "id" | "title" | "priceCents" | "platform" | "status" | "createdAt"
 > & {
   images: Pick<ListingImage, "url">[];
   seller: Pick<User, "slackId">;
 };
 
+// The cover sits straight on the page like a game case on a shelf, with the
+// price on a sticker in its corner. No card box around it.
 export async function ListingCard({
   listing,
   priority = false,
 }: {
   listing: CardListing;
-  // Set for above-the-fold cards (first row) so the LCP image preloads.
+  // Set for the first cards on the page (ListingGrid marks 4, one row on wide
+  // screens) so the LCP image preloads.
   priority?: boolean;
 }) {
   const cover = listing.images[0];
@@ -29,80 +33,63 @@ export async function ListingCard({
   const seller = await getSlackProfile(listing.seller.slackId);
 
   return (
-    <Link
-      href={`/listings/${listing.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-surface transition-all duration-150 hover:-translate-y-1 hover:border-accent/50 hover:shadow-hard-accent"
-    >
-      <div className="relative aspect-[4/3] overflow-hidden bg-surface-2">
-        {cover ? (
-          <Image
-            src={publicImageUrl(cover.url)}
-            alt=""
-            fill
-            priority={priority}
-            sizes="(max-width: 768px) 100vw, 320px"
-            className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
-              sold ? "opacity-40 grayscale" : ""
-            }`}
-          />
-        ) : (
-          <div className="grid h-full place-items-center text-border">
-            <ImageOff className="h-10 w-10" />
-          </div>
-        )}
-        {sold ? (
-          <span className="absolute left-3 top-3 rounded-md bg-danger px-2 py-0.5 font-mono text-xs font-bold uppercase tracking-widest text-accent-ink">
-            Sold
-          </span>
-        ) : null}
-        {platform ? (
-          platform.logoUrl ? (
-            <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-md bg-white/90 px-2 py-1 shadow-sm backdrop-blur-sm">
-              {/* Plain <img>: tiny external PNG, heavily CDN-cached; no need to
-                  route it through next/image or allow the host in next.config. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={platform.logoUrl}
-                alt=""
-                className="h-4 w-auto max-w-[48px] object-contain"
-              />
-              <span className="font-mono text-xs font-medium uppercase tracking-wider text-bg">
-                {platform.label}
-              </span>
-            </span>
-          ) : (
-            <span className="absolute right-3 top-3 rounded-md bg-bg/80 px-2 py-0.5 font-mono text-xs uppercase tracking-wider text-ink backdrop-blur-sm">
-              {platform.label}
-            </span>
-          )
-        ) : null}
-      </div>
-
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <h3 className="line-clamp-2 font-display text-base font-bold leading-snug tracking-tight text-ink">
-          {listing.title}
-        </h3>
-        <div className="flex items-center gap-1.5 text-xs text-muted">
-          {seller.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={seller.image}
+    <Link href={`/listings/${listing.id}`} className="group flex flex-col gap-2.5">
+      <div className="relative">
+        <div className="relative aspect-[3/4] overflow-hidden rounded-[4px] bg-surface-2 ring-1 ring-border">
+          {cover ? (
+            <Image
+              src={publicImageUrl(cover.url)}
               alt=""
-              className="h-4 w-4 rounded-full border border-border object-cover"
+              fill
+              priority={priority}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 270px"
+              className={`object-cover ${sold ? "opacity-50 grayscale" : ""}`}
             />
           ) : (
-            <span className="grid h-4 w-4 place-items-center rounded-full border border-border bg-surface-2 text-[8px] font-mono">
-              {seller.name.slice(0, 1).toUpperCase()}
-            </span>
+            <div className="grid h-full place-items-center text-muted">
+              <ImageOff className="h-10 w-10" />
+            </div>
           )}
-          <span className="truncate">{sellerLabel(seller)}</span>
         </div>
-        <div className="mt-auto flex items-center justify-between gap-2">
-          <span className="font-mono text-lg font-bold text-accent">
-            {formatPrice(listing.priceCents)}
+        <PriceSticker
+          priceCents={listing.priceCents}
+          sold={sold}
+          className="absolute right-2 top-2"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <h3 className="line-clamp-2 font-semibold leading-snug text-ink group-hover:underline">
+          {listing.title}
+        </h3>
+        {platform ? (
+          <p className="text-sm text-muted">{platform.label}</p>
+        ) : null}
+        <div className="flex items-center justify-between gap-2 text-xs text-muted">
+          <span className="flex min-w-0 items-center gap-1.5">
+            {seller.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={seller.image}
+                alt=""
+                className="h-4 w-4 shrink-0 rounded-full object-cover"
+              />
+            ) : null}
+            <span className="truncate">{sellerLabel(seller)}</span>
           </span>
+          <span className="shrink-0">{formatListedAgo(listing.createdAt)}</span>
         </div>
       </div>
     </Link>
+  );
+}
+
+export function ListingGrid({ listings }: { listings: CardListing[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+      {listings.map((listing, i) => (
+        <ListingCard key={listing.id} listing={listing} priority={i < 4} />
+      ))}
+    </div>
   );
 }

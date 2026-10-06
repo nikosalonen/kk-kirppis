@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Search, Sparkles } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { GamePlatform } from "@/lib/metadata";
@@ -49,7 +49,7 @@ export function MetadataFinder({
       if (!res.ok) throw new Error("search failed");
       const data = (await res.json()) as { results?: Result[] };
       setResults(data.results ?? []);
-      if (!data.results?.length) setError("No games found — try another title.");
+      if (!data.results?.length) setError("No games found. Try another title.");
     } catch {
       setError("Search failed. Try again.");
     } finally {
@@ -87,7 +87,7 @@ export function MetadataFinder({
     // close the finder.
     if (canAddCover && result.coverUrl && !coverPath) {
       setError(
-        "Couldn't import the cover — title and platform were still applied.",
+        "Couldn't import the cover. The title and platform were still filled in.",
       );
     } else {
       setOpen(false);
@@ -104,14 +104,14 @@ export function MetadataFinder({
         className="w-fit"
         onClick={() => setOpen(true)}
       >
-        <Sparkles className="h-4 w-4 text-accent" />
+        <Search className="h-4 w-4" />
         Find game info
       </Button>
     );
   }
 
   return (
-    <div className="flex w-full flex-col gap-3 rounded-[var(--radius)] border border-accent/30 bg-surface/60 p-3">
+    <div className="flex w-full flex-col gap-3 rounded-[var(--radius)] border border-border bg-surface p-3">
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -149,7 +149,7 @@ export function MetadataFinder({
           {results.map((r, idx) => {
             const platformLabels = r.platforms
               .map((p) => p.abbreviation ?? p.name)
-              .join(" · ");
+              .join(", ");
             return (
               <li key={`${r.title}-${idx}`}>
                 <button
@@ -172,7 +172,7 @@ export function MetadataFinder({
                     <span className="block truncate font-medium text-ink">
                       {r.title}
                     </span>
-                    <span className="flex items-center gap-2 font-mono text-xs text-muted">
+                    <span className="flex items-center gap-2 text-xs text-muted">
                       {r.year ? <span>{r.year}</span> : null}
                       {platformLabels ? (
                         <span className="truncate">{platformLabels}</span>

@@ -1,76 +1,66 @@
 @import "tailwindcss";
 
-/* ---- KK-Kirppis "arcade cartridge" theme ---------------------------------
-   Near-black surfaces, electric-lime power-up accent, monospace pricetags.
-   Tactile, slightly neo-brutalist: solid hairline borders + hard shadows. */
+/* ---- KK-Kirppis "used-game shelf" theme -----------------------------------
+   Follows the system light/dark setting. Neutral surfaces let the box art
+   carry the color; the yellow price sticker is the only accent (prices, plus
+   text selection). Interactive elements use ink (black in light, white in
+   dark). */
 @theme {
-  --color-bg: #0d0e12;
-  --color-surface: #15171e;
-  --color-surface-2: #1c1f29;
-  --color-border: #2a2e3a;
-  --color-ink: #e9eaef;
-  --color-muted: #969cab;
-  --color-accent: #b9ff36;
-  --color-accent-dim: #93cf1f;
-  --color-accent-ink: #10130a;
-  --color-danger: #ff5d73;
+  --color-bg: #eceef1;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f5f7;
+  --color-border: #d5d9df;
+  --color-ink: #1a1c21;
+  /* Text and icons placed on an ink background (primary buttons, chips). */
+  --color-on-ink: #ffffff;
+  --color-muted: #5f6672;
+  --color-sticker: #ffc83d;
+  --color-sticker-ink: #1a1c21;
+  --color-danger: #b3203a;
+  --color-on-danger: #ffffff;
 
-  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 }
 
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light dark;
+  }
+
+  /* Overrides the @theme values above; the base layer wins over the theme
+     layer, so every utility picks these up automatically. */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #15171b;
+      --color-surface: #1e2026;
+      --color-surface-2: #272a31;
+      --color-border: #353943;
+      --color-ink: #ecedf0;
+      --color-on-ink: #15171b;
+      --color-muted: #9ba1ac;
+      --color-danger: #ff6b7e;
+      --color-on-danger: #15171b;
+    }
   }
 
   body {
     background-color: var(--color-bg);
     color: var(--color-ink);
     font-family: var(--font-sans);
-    /* Atmosphere: a soft lime glow up top + faint scanlines, no flat fill. */
-    background-image:
-      radial-gradient(
-        60rem 40rem at 78% -8%,
-        color-mix(in oklab, var(--color-accent) 12%, transparent),
-        transparent 70%
-      ),
-      radial-gradient(
-        50rem 36rem at 8% 0%,
-        color-mix(in oklab, #4ea8ff 8%, transparent),
-        transparent 65%
-      ),
-      repeating-linear-gradient(
-        0deg,
-        rgba(255, 255, 255, 0.014) 0px,
-        rgba(255, 255, 255, 0.014) 1px,
-        transparent 1px,
-        transparent 3px
-      );
-    background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
   }
 
   ::selection {
-    background: var(--color-accent);
-    color: var(--color-accent-ink);
+    background: var(--color-sticker);
+    color: var(--color-sticker-ink);
   }
 
   *:focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-ink);
     outline-offset: 2px;
-  }
-}
-
-@layer utilities {
-  /* Tactile hard shadow used on interactive cards/buttons. */
-  .shadow-hard {
-    box-shadow: 4px 4px 0 0 var(--color-border);
-  }
-  .shadow-hard-accent {
-    box-shadow: 4px 4px 0 0 var(--color-accent);
   }
 }

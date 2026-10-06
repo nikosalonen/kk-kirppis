@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { Search, PackageOpen } from "lucide-react";
+import { Search } from "lucide-react";
 import { getActiveListings, getActivePlatforms } from "@/lib/listings";
-import { resolvePlatform } from "@/lib/platforms";
-import { ListingCard } from "@/components/listing-card";
-import { Input, Select } from "@/components/ui/input";
+import { groupPlatforms, platformFilter } from "@/lib/platforms";
+import { ListingGrid } from "@/components/listing-card";
+import { RememberBrowseUrl } from "@/components/browse-memory";
+import { Input } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,16 @@ type SearchParams = Promise<{
   platform?: string;
 }>;
 
+// Empty params are dropped, so "All platforms" with no search links to plain
+// "/" rather than "/?q=&platform=".
+function filterHref(q: string | undefined, platform: string | undefined) {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (platform) params.set("platform", platform);
+  const query = params.toString();
+  return query ? `/?${query}` : "/";
+}
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -20,98 +32,115 @@ export default async function HomePage({
 }) {
   const sp = await searchParams;
   const q = sp.q?.trim() || undefined;
-  const platform = sp.platform?.trim() || undefined;
+  const platformParam = sp.platform?.trim() || undefined;
 
-  const [listings, platforms] = await Promise.all([
-    getActiveListings({ q, platform }),
-    getActivePlatforms(),
+  // The URL carries the platform's display label ("Switch"), which expands to
+  // every stored spelling of it. Only a platform filter needs the groups
+  // before the listings query; without one, both queries run at once.
+  const platformGroupsPromise = getActivePlatforms().then(groupPlatforms);
+  const listingsPromise = platformParam
+    ? platformGroupsPromise.then((groups) =>
+        getActiveListings({
+          q,
+          platforms: platformFilter(groups, platformParam)?.values,
+        }),
+      )
+    : getActiveListings({ q });
+  const [platformGroups, listings] = await Promise.all([
+    platformGroupsPromise,
+    listingsPromise,
   ]);
+  const platform = platformFilter(platformGroups, platformParam)?.label;
 
   const hasFilters = Boolean(q || platform);
+  const count = listings.length;
+  const chips = [
+    { label: "All platforms", value: undefined },
+    ...platformGroups.map((g) => ({ label: g.label, value: g.label })),
+  ];
 
   return (
-    <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-3">
-        <span className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
-          Koodiklinikka · used games
-        </span>
-        <h1 className="max-w-2xl font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
-          Give your games a{" "}
-          <span className="text-accent">second player.</span>
-        </h1>
-        <p className="max-w-xl text-muted">
-          Browse what the community is selling, or list your own shelf-dwellers.
-          Deals happen over Slack — no fees, no middlemen.
-        </p>
-      </section>
-
-      <form
-        method="get"
-        className="flex flex-col gap-3 rounded-[var(--radius)] border border-border bg-surface/60 p-3 sm:flex-row sm:items-center"
-      >
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <Input
-            type="search"
-            name="q"
-            defaultValue={q ?? ""}
-            placeholder="Search titles…"
-            className="pl-9"
-            aria-label="Search titles"
-          />
-        </div>
-        <Select
-          name="platform"
-          defaultValue={platform ?? ""}
-          aria-label="Platform"
-          className="sm:w-44"
-          disabled={platforms.length === 0}
-        >
-          <option value="">Any platform</option>
-          {platforms.map((p) => (
-            // Value stays the raw stored string (exact-match filter); only the
-            // label is normalized for a consistent dropdown.
-            <option key={p} value={p}>
-              {resolvePlatform(p)?.label ?? p}
-            </option>
-          ))}
-        </Select>
-        <div className="flex gap-2">
-          <Button type="submit">Filter</Button>
-          {hasFilters ? (
-            <Link
-              href="/"
-              className={buttonVariants({ variant: "outline", size: "md" })}
-            >
-              Clear
-            </Link>
+    <div className="flex flex-col gap-6">
+      <RememberBrowseUrl href={filterHref(q, platform)} />
+      <div className="flex flex-col gap-4">
+        <form method="get" className="flex gap-2">
+          {platform ? (
+            <input type="hidden" name="platform" value={platform} />
           ) : null}
-        </div>
-      </form>
-
-      {listings.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-[var(--radius)] border border-dashed border-border py-20 text-center">
-          <PackageOpen className="h-10 w-10 text-muted" />
-          <div>
-            <p className="font-display text-lg font-bold">
-              {hasFilters ? "No games match those filters." : "Nothing listed yet."}
-            </p>
-            <p className="text-sm text-muted">
-              {hasFilters
-                ? "Try widening your search."
-                : "Be the first to list a game."}
-            </p>
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <Input
+              type="search"
+              name="q"
+              defaultValue={q ?? ""}
+              placeholder="Search titles"
+              className="pl-9"
+              aria-label="Search titles"
+            />
           </div>
-          <Link href="/sell" className={buttonVariants({ variant: "primary" })}>
-            Sell a game
+          <Button type="submit" variant="outline">
+            Search
+          </Button>
+        </form>
+
+        {platformGroups.length > 0 ? (
+          <nav
+            aria-label="Filter by platform"
+            className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
+          >
+            {chips.map(({ label, value }) => {
+              const active = value === platform;
+              return (
+                <Link
+                  key={label}
+                  href={filterHref(q, value)}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3 py-1.5 text-sm transition-colors",
+                    active
+                      ? "border-ink bg-ink text-on-ink"
+                      : "border-border bg-surface text-ink hover:border-ink/40",
+                  )}
+                >
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h1 className="font-display text-2xl font-extrabold tracking-tight">
+          {count === 0 && !hasFilters
+            ? "Nothing for sale yet"
+            : `${count} ${count === 1 ? "game" : "games"} for sale`}
+        </h1>
+        {hasFilters ? (
+          <Link
+            href="/"
+            className="text-sm text-muted underline underline-offset-4 hover:text-ink"
+          >
+            Clear filters
           </Link>
+        ) : null}
+      </div>
+
+      {count === 0 ? (
+        <div className="flex flex-col items-start gap-4 py-8">
+          <p className="max-w-md text-muted">
+            {hasFilters
+              ? "No games match this search. Try another title or platform."
+              : "Got a game you've finished with? List it and it will show up here."}
+          </p>
+          {hasFilters ? null : (
+            <Link href="/sell" className={buttonVariants({ variant: "primary" })}>
+              Sell a game
+            </Link>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {listings.map((listing, i) => (
-            <ListingCard key={listing.id} listing={listing} priority={i < 3} />
-          ))}
-        </div>
+        <ListingGrid listings={listings} />
       )}
     </div>
   );

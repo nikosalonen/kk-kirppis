@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { auth } from "@/auth";
 import { getSellerProfile } from "@/lib/listings";
 import { getSlackProfile } from "@/lib/slack-profile";
 import { sellerLabel, slackDmUrl } from "@/lib/format";
-import { ListingCard } from "@/components/listing-card";
+import { ListingGrid } from "@/components/listing-card";
+import { BackToListings } from "@/components/browse-memory";
 import { buttonVariants } from "@/components/ui/button";
 
 const TEAM_ID = process.env.KOODIKLINIKKA_SLACK_TEAM_ID ?? "";
@@ -31,13 +32,7 @@ export default async function SellerPage({
 
   return (
     <div className="flex flex-col gap-7">
-      <Link
-        href="/"
-        className="inline-flex w-fit items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-muted hover:text-accent"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to listings
-      </Link>
+      <BackToListings />
 
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
         <div className="flex items-center gap-4">
@@ -49,7 +44,7 @@ export default async function SellerPage({
               className="h-14 w-14 rounded-full border border-border object-cover"
             />
           ) : (
-            <span className="grid h-14 w-14 place-items-center rounded-full border border-border bg-surface-2 font-mono text-sm text-muted">
+            <span className="grid h-14 w-14 place-items-center rounded-full border border-border bg-surface-2 text-sm font-medium text-muted">
               {identity.name.slice(0, 2).toUpperCase()}
             </span>
           )}
@@ -57,7 +52,7 @@ export default async function SellerPage({
             <h1 className="font-display text-3xl font-extrabold tracking-tight">
               {label}
             </h1>
-            <p className="font-mono text-sm text-muted">
+            <p className="text-sm text-muted">
               {listings.length} active{" "}
               {listings.length === 1 ? "listing" : "listings"}
             </p>
@@ -82,22 +77,13 @@ export default async function SellerPage({
       </header>
 
       {listings.length === 0 ? (
-        <div className="rounded-[var(--radius)] border border-dashed border-border py-20 text-center">
-          <p className="font-display text-lg font-bold">
-            No active listings right now.
-          </p>
-          <p className="text-sm text-muted">
-            {isSelf
-              ? "List a game and it'll show up here."
-              : `${label} doesn't have anything for sale at the moment.`}
-          </p>
-        </div>
+        <p className="py-8 text-muted">
+          {isSelf
+            ? "You have nothing for sale right now. List a game and it will show up here."
+            : `${label} has nothing for sale right now.`}
+        </p>
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {listings.map((listing, i) => (
-            <ListingCard key={listing.id} listing={listing} priority={i < 3} />
-          ))}
-        </div>
+        <ListingGrid listings={listings} />
       )}
     </div>
   );

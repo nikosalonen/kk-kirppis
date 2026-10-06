@@ -11,8 +11,8 @@ payments, no middlemen.
 - **Auth.js v5** — "Sign in with Slack" (OIDC), restricted to one workspace
 - **Prisma 7** + **PostgreSQL** (Supabase) via the `pg` driver adapter
 - **Supabase Storage** for listing images (signed direct uploads)
-- **Tailwind v4** — "arcade cartridge" dark theme
-- **Vitest** for the security-critical ownership test
+- **Tailwind v4** — "used-game shelf" theme that follows the system light/dark setting
+- **Vitest** for unit tests, including the security-critical ownership check
 - Seller identity (name, **@handle**, avatar) fetched **live from Slack** and
   cached — no profile data is stored, only the Slack user id
 - Optional: **IGDB** game-metadata autofill, **Slack channel announcements**

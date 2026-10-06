@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/cn";
 
 const fieldStyles =
-  "w-full rounded-[var(--radius)] border border-border bg-surface px-3.5 text-ink placeholder:text-muted/60 transition-colors hover:border-border focus:border-accent focus:outline-none";
+  "w-full rounded-[var(--radius)] border border-border bg-surface px-3.5 text-ink placeholder:text-muted/70 transition-colors hover:border-ink/30 focus:border-ink focus:outline-none disabled:opacity-50";
 
 export function Input({
   className,
@@ -23,18 +23,6 @@ export function Textarea({
   );
 }
 
-export function Select({
-  className,
-  ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      className={cn(fieldStyles, "h-11 appearance-none pr-9", className)}
-      {...props}
-    />
-  );
-}
-
 export function Field({
   label,
   hint,
@@ -48,11 +36,11 @@ export function Field({
 }) {
   return (
     <label htmlFor={htmlFor} className="flex flex-col gap-1.5">
-      <span className="font-mono text-xs uppercase tracking-wider text-muted">
+      <span className="text-sm font-medium text-ink">
         {label}
       </span>
       {children}
-      {hint ? <span className="text-xs text-muted/80">{hint}</span> : null}
+      {hint ? <span className="text-xs text-muted">{hint}</span> : null}
     </label>
   );
 }

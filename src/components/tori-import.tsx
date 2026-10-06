@@ -115,14 +115,14 @@ export function ToriImport({
         className="w-fit"
         onClick={() => setOpen(true)}
       >
-        <Link2 className="h-4 w-4 text-accent" />
+        <Link2 className="h-4 w-4" />
         Import from Tori
       </Button>
     );
   }
 
   return (
-    <div className="flex w-full flex-col gap-2 rounded-[var(--radius)] border border-accent/30 bg-surface/60 p-3">
+    <div className="flex w-full flex-col gap-2 rounded-[var(--radius)] border border-border bg-surface p-3">
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -163,12 +163,12 @@ export function ToriImport({
           type="checkbox"
           checked={agreed}
           onChange={(e) => setAgreed(e.target.checked)}
-          className="h-4 w-4 accent-accent"
+          className="h-4 w-4 accent-ink"
         />
         I swear this is my tori.fi listing
       </label>
       {error ? <p className="text-sm text-muted">{error}</p> : null}
-      <p className="text-xs text-muted/80">
+      <p className="text-xs text-muted">
         Pulls the title, description, price, and cover photo. Review and edit
         before publishing.
       </p>
