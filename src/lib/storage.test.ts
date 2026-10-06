@@ -7,7 +7,8 @@ vi.mock("server-only", () => ({}));
 // Stub the Supabase client so deleteImages exercises its error handling without
 // a network call. `remove` is reconfigured per test.
 const remove = vi.fn();
-const from = vi.fn(() => ({ remove }));
+const list = vi.fn();
+const from = vi.fn(() => ({ remove, list }));
 vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn(() => ({ storage: { from } })),
 }));
@@ -16,7 +17,7 @@ vi.mock("@supabase/supabase-js", () => ({
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
 
-import { deleteImages } from "@/lib/storage";
+import { deleteImages, listStoredImages } from "@/lib/storage";
 
 describe("deleteImages — best-effort cleanup", () => {
   beforeEach(() => {
@@ -50,5 +51,39 @@ describe("deleteImages — best-effort cleanup", () => {
       "boom",
     );
     errSpy.mockRestore();
+  });
+});
+
+describe("listStoredImages — walks member folders", () => {
+  beforeEach(() => list.mockReset());
+
+  it("lists files under each member folder and skips stray files", async () => {
+    list.mockImplementation(async (prefix: string) => {
+      if (prefix === "listings") {
+        return {
+          data: [
+            { name: "user-1", id: null, created_at: null },
+            { name: "stray.jpg", id: "x", created_at: "2026-10-01T00:00:00Z" },
+          ],
+          error: null,
+        };
+      }
+      return {
+        data: [{ name: "a.jpg", id: "1", created_at: "2026-10-01T00:00:00Z" }],
+        error: null,
+      };
+    });
+
+    await expect(listStoredImages()).resolves.toEqual([
+      {
+        path: "listings/user-1/a.jpg",
+        createdAt: new Date("2026-10-01T00:00:00Z"),
+      },
+    ]);
+  });
+
+  it("throws when listing fails, so the cleanup never runs on partial data", async () => {
+    list.mockResolvedValue({ data: null, error: { message: "boom" } });
+    await expect(listStoredImages()).rejects.toThrow(/boom/);
   });
 });

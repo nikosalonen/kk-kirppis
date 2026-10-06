@@ -77,6 +77,8 @@ Fill `.env` (see `.env.example` for the full list):
   `SUPABASE_STORAGE_BUCKET`
 - Optional: `IGDB_CLIENT_ID` / `IGDB_SECRET` (metadata autofill), `SLACK_BOT_TOKEN` (seller
   identity via `users.info`), `SLACK_ANNOUNCE_CHANNEL_ID` (channel announcements)
+- `CRON_SECRET` — any random string (`openssl rand -hex 32`); protects the
+  orphaned-image cleanup cron
 
 ## Security model
 
@@ -127,6 +129,20 @@ Supabase pauses free-tier projects after about 7 days without database
 activity. A daily Vercel cron (`crons` in `vercel.json`) calls `/api/health`,
 which runs `SELECT 1`. It returns `503` if the database is unreachable, so a
 paused or broken database shows up as a failed cron run in the Vercel logs.
+
+### Orphaned image cleanup
+
+The browser uploads photos before the listing is saved, so some uploads never
+get attached: the seller leaves the form, picks a different game cover, or
+resubmits after an error. A second daily cron calls
+`/api/cron/cleanup-images`, which deletes stored images that no listing
+references and that are older than 24 hours. The age limit protects uploads
+from forms that are still open.
+
+The route deletes files, so it requires `CRON_SECRET` and returns `401`
+without it. As a safety stop, it deletes nothing if storage has images but
+the database has no image rows (for example, when pointed at the wrong
+database).
 
 ## Deploy on tag
 

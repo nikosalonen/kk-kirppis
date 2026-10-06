@@ -84,6 +84,54 @@ export async function deleteImages(paths: string[]): Promise<void> {
   }
 }
 
+export type StoredImage = { path: string; createdAt: Date };
+
+// Storage's list() returns at most `limit` entries, so read folders page by page.
+const LIST_PAGE_SIZE = 1000;
+
+async function listFolder(prefix: string) {
+  const entries = [];
+  for (let offset = 0; ; offset += LIST_PAGE_SIZE) {
+    const { data, error } = await admin()
+      .storage.from(BUCKET)
+      .list(prefix, { limit: LIST_PAGE_SIZE, offset });
+    if (error) {
+      throw new Error(`Failed to list ${prefix}: ${error.message}`);
+    }
+    entries.push(...data);
+    if (data.length < LIST_PAGE_SIZE) return entries;
+  }
+}
+
+/**
+ * Every image in the bucket. Images live at listings/<userId>/<file>, and
+ * list() reads one folder level at a time (subfolders come back with id null).
+ */
+export async function listStoredImages(): Promise<StoredImage[]> {
+  const images: StoredImage[] = [];
+  for (const folder of await listFolder("listings")) {
+    if (folder.id !== null) continue; // a file, not a member's folder
+    const prefix = `listings/${folder.name}`;
+    for (const file of await listFolder(prefix)) {
+      if (file.id === null || !file.created_at) continue;
+      images.push({
+        path: `${prefix}/${file.name}`,
+        createdAt: new Date(file.created_at),
+      });
+    }
+  }
+  return images;
+}
+
+/** Remove storage objects, throwing on failure (unlike deleteImages). */
+export async function removeImages(paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  const { error } = await admin().storage.from(BUCKET).remove(paths);
+  if (error) {
+    throw new Error(`Failed to remove images: ${error.message}`);
+  }
+}
+
 /**
  * Upload already-in-hand image bytes (e.g. a fetched game cover) to the bucket
  * server-side, returning the stored object path. Type must be allowed.
