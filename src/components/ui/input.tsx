@@ -1,8 +1,9 @@
 import * as React from "react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const fieldStyles =
-  "w-full rounded-[var(--radius)] border border-border bg-surface px-3.5 text-ink placeholder:text-muted/60 transition-colors hover:border-border focus:border-accent focus:outline-none";
+  "w-full rounded-[var(--radius)] border border-border bg-surface px-3.5 text-ink placeholder:text-muted/70 transition-colors hover:border-ink/30 focus:border-ink focus:outline-none disabled:opacity-50";
 
 export function Input({
   className,
@@ -23,15 +24,22 @@ export function Textarea({
   );
 }
 
+// `className` sizes the wrapper, so width utilities work as on a plain select.
 export function Select({
   className,
   ...props
 }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select
-      className={cn(fieldStyles, "h-11 appearance-none pr-9", className)}
-      {...props}
-    />
+    <div className={cn("relative", className)}>
+      <select
+        className={cn(fieldStyles, "h-11 appearance-none pr-9")}
+        {...props}
+      />
+      <ChevronDown
+        aria-hidden="true"
+        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+      />
+    </div>
   );
 }
 
@@ -48,7 +56,7 @@ export function Field({
 }) {
   return (
     <label htmlFor={htmlFor} className="flex flex-col gap-1.5">
-      <span className="font-mono text-xs uppercase tracking-wider text-muted">
+      <span className="text-sm font-medium text-ink">
         {label}
       </span>
       {children}
