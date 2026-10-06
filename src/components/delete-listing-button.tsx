@@ -1,7 +1,7 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 
 export function DeleteListingButton({
   action,
@@ -17,10 +17,10 @@ export function DeleteListingButton({
         }
       }}
     >
-      <Button variant="danger" type="submit">
+      <SubmitButton variant="danger">
         <Trash2 className="h-4 w-4" />
         Delete
-      </Button>
+      </SubmitButton>
     </form>
   );
 }
