@@ -423,7 +423,7 @@ export function ListingForm({
                   <button
                     type="button"
                     onClick={() => removeAt(i)}
-                    className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-md bg-bg/80 text-ink opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
+                    className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-md bg-bg/80 text-ink opacity-0 transition-opacity hover:text-danger focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
                     aria-label="Remove image"
                   >
                     <X className="h-4 w-4" />

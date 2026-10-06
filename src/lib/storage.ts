@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
+import { userImagePrefix } from "@/lib/validation";
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET ?? "listing-images";
 export const ALLOWED_IMAGE_TYPES = [
@@ -60,7 +61,7 @@ export async function createImageUploadTargets(
     if (!ext) {
       throw new Error(`Unsupported image type: ${type}`);
     }
-    const path = `listings/${userId}/${randomUUID()}.${ext}`;
+    const path = `${userImagePrefix(userId)}${randomUUID()}.${ext}`;
     const { data, error } = await client.storage
       .from(BUCKET)
       .createSignedUploadUrl(path);
@@ -96,7 +97,7 @@ export async function uploadImageBytes(
   if (!ext) {
     throw new Error(`Unsupported image type: ${contentType}`);
   }
-  const path = `listings/${userId}/${randomUUID()}.${ext}`;
+  const path = `${userImagePrefix(userId)}${randomUUID()}.${ext}`;
   const { error } = await admin()
     .storage.from(BUCKET)
     .upload(path, bytes, { contentType, upsert: false });

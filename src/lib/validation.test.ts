@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   eurosToCents,
+  isOwnImagePath,
   listingInputSchema,
   MAX_IMAGES,
 } from "@/lib/validation";
@@ -104,5 +105,16 @@ describe("listingInputSchema", () => {
         }),
       ).toThrow();
     });
+  });
+});
+
+describe("isOwnImagePath", () => {
+  it("accepts paths in the member's own folder", () => {
+    expect(isOwnImagePath("listings/user-1/a.jpg", "user-1")).toBe(true);
+  });
+
+  it("rejects another member's folder, even one sharing an id prefix", () => {
+    expect(isOwnImagePath("listings/user-2/a.jpg", "user-1")).toBe(false);
+    expect(isOwnImagePath("listings/user-10/a.jpg", "user-1")).toBe(false);
   });
 });

@@ -27,6 +27,20 @@ export const listingInputSchema = z.object({
 
 export type ListingInput = z.infer<typeof listingInputSchema>;
 
+/** Storage folder for one member's images. Every path we issue lives under it. */
+export function userImagePrefix(userId: string): string {
+  return `listings/${userId}/`;
+}
+
+/**
+ * True when the path is in the member's own folder. Image paths come from the
+ * client, and the server deletes them with the service-role key, so without
+ * this check a member could attach another member's image and then delete it.
+ */
+export function isOwnImagePath(path: string, userId: string): boolean {
+  return path.startsWith(userImagePrefix(userId));
+}
+
 /** Euros (possibly fractional) -> integer cents, no float drift. */
 export function eurosToCents(euros: number): number {
   return Math.round(euros * 100);

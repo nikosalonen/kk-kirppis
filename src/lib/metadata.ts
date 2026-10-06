@@ -90,6 +90,15 @@ async function getIgdbToken(): Promise<string> {
   return cachedToken.value;
 }
 
+/**
+ * Escape a value for an Apicalypse string literal so it can't break out of the
+ * quotes. Backslashes go first: otherwise a trailing `\` would escape our
+ * closing quote.
+ */
+export function escapeApicalypseString(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
 export async function searchGames(query: string): Promise<GameResult[]> {
   const clientId = process.env.IGDB_CLIENT_ID;
   if (!clientId) {
@@ -99,9 +108,8 @@ export async function searchGames(query: string): Promise<GameResult[]> {
 
   // Apicalypse query: fuzzy search by name, pulling the cover image id, the
   // release date, and the platforms (nested expansion — no extra API call).
-  // Escape quotes so the search term can't break out of the query string.
   const body = [
-    `search "${query.replace(/"/g, '\\"')}";`,
+    `search "${escapeApicalypseString(query)}";`,
     "fields name, first_release_date, cover.image_id, platforms.name, platforms.abbreviation, platforms.slug;",
     "limit 8;",
   ].join(" ");

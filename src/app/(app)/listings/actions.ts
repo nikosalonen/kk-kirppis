@@ -9,7 +9,11 @@ import { deleteImages } from "@/lib/storage";
 import { announceNewListing } from "@/lib/slack";
 import { getSlackProfile } from "@/lib/slack-profile";
 import { sellerLabel } from "@/lib/format";
-import { eurosToCents, listingInputSchema } from "@/lib/validation";
+import {
+  eurosToCents,
+  isOwnImagePath,
+  listingInputSchema,
+} from "@/lib/validation";
 
 export type FormState = { error?: string } | undefined;
 
@@ -34,6 +38,9 @@ export async function createListing(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
   const data = parsed.data;
+  if (!data.imagePaths.every((path) => isOwnImagePath(path, user.id))) {
+    return { error: "Invalid image path" };
+  }
 
   const listing = await prisma.listing.create({
     data: {
@@ -82,10 +89,20 @@ export async function updateListing(
 
   // The form submits the full, ordered set of image paths (kept + newly
   // uploaded). Existing images absent from that set were removed by the seller.
+  // New paths must be in the seller's own folder; images already on the
+  // listing may stay as they are.
   const newPaths = data.imagePaths;
-  const removed = existing.images
-    .map((img) => img.url)
-    .filter((url) => !newPaths.includes(url));
+  const existingPaths = existing.images.map((img) => img.url);
+  const allowed = newPaths.every(
+    (path) => isOwnImagePath(path, user.id) || existingPaths.includes(path),
+  );
+  if (!allowed) {
+    return { error: "Invalid image path" };
+  }
+  // Only ever delete files from the seller's own folder.
+  const removed = existingPaths.filter(
+    (url) => !newPaths.includes(url) && isOwnImagePath(url, user.id),
+  );
 
   // Replace the image rows in one transaction so sortOrder matches the grid;
   // kept images simply get recreated against the same storage object.
@@ -132,8 +149,13 @@ export async function deleteListing(id: string): Promise<void> {
   const user = await requireUser();
   const listing = await getOwnedListingOrThrow(id, user.id); // IDOR guard
 
-  // Best-effort storage cleanup before the rows cascade away.
-  await deleteImages(listing.images.map((img) => img.url));
+  // Best-effort storage cleanup before the rows cascade away. Only files in
+  // the seller's own folder are deleted.
+  await deleteImages(
+    listing.images
+      .map((img) => img.url)
+      .filter((url) => isOwnImagePath(url, user.id)),
+  );
   await prisma.listing.delete({ where: { id } });
 
   revalidatePath("/");
