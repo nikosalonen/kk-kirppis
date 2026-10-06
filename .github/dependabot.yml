@@ -26,13 +26,3 @@ updates:
         update-types:
           - minor
           - patch
-
-  # GitHub Actions used by the release/deploy workflow.
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-    groups:
-      actions:
-        patterns:
-          - "*"

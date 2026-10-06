@@ -123,6 +123,9 @@ check:
 4. Deploy. The build runs `prisma generate` automatically; run
    `npm run db:deploy` against the production database for migrations.
 
+After setup, every push to `main` deploys to production through Vercel's Git
+integration. There is no separate CI deploy step.
+
 ### Database keep-alive
 
 Supabase pauses free-tier projects after about 7 days without database
@@ -143,16 +146,6 @@ The route deletes files, so it requires `CRON_SECRET` and returns `401`
 without it. As a safety stop, it deletes nothing if storage has images but
 the database has no image rows (for example, when pointed at the wrong
 database).
-
-## Deploy on tag
-
-A GitHub Actions workflow (`.github/workflows/release-deploy.yml`) deploys to
-Vercel production when a `v*` tag is pushed or a Release is published. Requires
-the `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` repo secrets.
-
-```bash
-git tag v0.1.0 && git push origin v0.1.0
-```
 
 ## No preview deployments
 
